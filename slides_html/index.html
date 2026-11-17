@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Memory Management: 從上下文極限到動態圖譜與真實情節架構</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- KaTeX for crisp academic formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars for card inner content */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(71, 85, 105, 1);
+    }
+    .slide-enter {
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* KaTeX text size enhancement */
+    .katex {
+      font-size: 1.12em !important;
+    }
+    .katex-display {
+      margin: 0.6em 0 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200 overflow-hidden">
+
+  <!-- Top Global Header / Progress Bar -->
+  <header class="bg-slate-900/95 border-b border-slate-800 backdrop-blur px-6 py-3 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-3">
+      <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 font-mono font-bold text-sm border border-cyan-500/30">
+        LM
+      </span>
+      <div>
+        <h1 class="text-base font-bold tracking-wide text-slate-100">LLM Memory Management 深度研討</h1>
+        <p class="text-xs text-slate-400 font-mono">資工與 AI 領域研究生前沿教學簡報</p>
+      </div>
+    </div>
+
+    <!-- Center Slide Title Pill -->
+    <div id="slideHeaderTopic" class="hidden md:inline-flex items-center px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 text-xs md:text-sm font-medium text-slate-200">
+      載入中...
+    </div>
+
+    <!-- Controls & Page Indicator -->
+    <div class="flex items-center space-x-4">
+      <span id="slideIndicator" class="text-xs md:text-sm font-mono text-cyan-400 bg-cyan-950/70 px-3 py-1 rounded-md border border-cyan-800/60 font-bold">
+        01 / 13
+      </span>
+      <div class="flex items-center space-x-1.5">
+        <button id="prevBtn" onclick="prevSlide()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition disabled:opacity-30 disabled:hover:bg-slate-800 cursor-pointer" title="上一頁 (←)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button id="nextBtn" onclick="nextSlide()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition disabled:opacity-30 disabled:hover:bg-slate-800 cursor-pointer" title="下一頁 (→)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <button onclick="toggleOutline()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition ml-2 cursor-pointer flex items-center gap-1.5 text-xs font-medium" title="簡報大綱 (O)">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+          <span class="hidden sm:inline">大綱</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Progress Bar Line -->
+  <div class="w-full bg-slate-900 h-1.5">
+    <div id="progressBar" class="bg-gradient-to-r from-cyan-500 via-indigo-500 to-emerald-400 h-1.5 transition-all duration-300 ease-out" style="width: 7.7%;"></div>
+  </div>
+
+  <!-- Main Slide Viewport (Pinned Top-Aligned Container for Unified Title Height) -->
+  <main class="flex-1 relative overflow-y-auto px-4 py-5 md:px-8 md:py-6 flex justify-center items-start">
+    <div id="slideContent" class="w-full max-w-7xl flex flex-col justify-start min-h-full">
+      <!-- Injected Dynamically via JS with guaranteed identical top title height -->
+    </div>
+  </main>
+
+  <!-- Footer Meta & Wiki Citation Badge -->
+  <footer class="bg-slate-900/95 border-t border-slate-800 px-6 py-2.5 flex flex-wrap items-center justify-between text-xs md:text-sm text-slate-400 z-20">
+    <div class="flex items-center space-x-2">
+      <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="font-medium">事實邊界：100% 嚴格源自 <code class="text-cyan-300 font-mono">wiki/</code> 知識庫（零幻覺）</span>
+    </div>
+    <div id="wikiSourceBadge" class="font-mono text-cyan-300 bg-slate-800/90 px-3 py-1 rounded border border-slate-700 text-xs md:text-sm font-semibold">
+      來源: wiki/index.md
+    </div>
+    <div class="hidden sm:flex items-center space-x-3 text-xs text-slate-400">
+      <span>快捷鍵: <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">←</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">→</kbd> 切換</span>
+      <span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">O</kbd> 大綱</span>
+    </div>
+  </footer>
+
+  <!-- Slide Outline Modal Drawer -->
+  <div id="outlineDrawer" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex justify-end transition-opacity">
+    <div class="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 overflow-y-auto flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+          <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            簡報導航大綱 (13 頁)
+          </h2>
+          <button onclick="toggleOutline()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <nav id="outlineList" class="space-y-2 text-xs md:text-sm">
+          <!-- Outline items generated by JS -->
+        </nav>
+      </div>
+      <div class="pt-4 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <span>點擊任意項目即可直接快轉該頁</span>
+        <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[11px]">ESC 關閉</kbd>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Complete structured slide dataset grounded 100% in wiki/ files
+    const slidesData = [
+      {
+        id: 1,
+        title: "大型語言模型記憶管理架構演進",
+        subtitle: "從傳統 Context Window 極限到動態圖譜與真實情節保留架構（5 大核心文獻橫向剖析）",
+        category: "Overview & Agenda",
+        wikiSource: "wiki/index.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- Top Curriculum Intro Banner -->
+            <div class="p-4 md:p-5 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900 to-emerald-950/60 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div class="space-y-1.5 text-center md:text-left">
+                <div class="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-cyan-950 border border-cyan-800/60 text-cyan-400 text-xs font-mono font-bold uppercase tracking-wider">
+                  CS & AI Graduate Curriculum
+                </div>
+                <p class="text-sm md:text-base text-slate-200 leading-relaxed font-medium">
+                  本研討課程橫向解構 5 篇核心文獻，系統剖析多會話下的記憶管理瓶頸、生命週期與工程權衡。
+                </p>
+              </div>
+              <div class="shrink-0 px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-300 text-center">
+                💡 點擊下方 5 大系統卡片<br/><span class="text-emerald-400 font-bold">可直接快轉至對應章節</span>
+              </div>
+            </div>
+
+            <!-- 5 Clickable Core Architecture Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3.5">
+              <!-- Card 1: Context Limit -->
+              <button onclick="goToSlide(1)" class="group cursor-pointer p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-amber-900/50 hover:border-amber-400 hover:bg-slate-850 hover:scale-[1.03] active:scale-95 transition-all text-left flex flex-col justify-between shadow-lg hover:shadow-amber-500/10">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-mono uppercase text-amber-400 font-bold tracking-wider">Baseline 01</span>
+                    <span class="text-[11px] font-mono text-amber-500/70 group-hover:text-amber-400">P.02-03</span>
+                  </div>
+                  <h3 class="font-bold text-slate-100 mt-2 text-base md:text-lg group-hover:text-amber-300 transition-colors flex items-center justify-between">
+                    <span>Context 極限</span>
+                    <span class="text-sm opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-400">&rarr;</span>
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">MCW vs. MECW 實證崩塌、注意力發散與級聯失敗。</p>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
+                  <span class="text-amber-300 font-semibold">Paulsen 2025</span>
+                  <span class="text-amber-400 font-bold group-hover:underline">點擊研讀 &rarr;</span>
+                </div>
+              </button>
+
+              <!-- Card 2: Mem0 -->
+              <button onclick="goToSlide(3)" class="group cursor-pointer p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-emerald-900/50 hover:border-emerald-400 hover:bg-slate-850 hover:scale-[1.03] active:scale-95 transition-all text-left flex flex-col justify-between shadow-lg hover:shadow-emerald-500/10">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-mono uppercase text-emerald-400 font-bold tracking-wider">System 02</span>
+                    <span class="text-[11px] font-mono text-emerald-500/70 group-hover:text-emerald-400">P.04-05</span>
+                  </div>
+                  <h3 class="font-bold text-slate-100 mt-2 text-base md:text-lg group-hover:text-emerald-300 transition-colors flex items-center justify-between">
+                    <span>Mem0 (向量 / 圖譜)</span>
+                    <span class="text-sm opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-emerald-400">&rarr;</span>
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">增量兩階段管線、ADD/UPDATE/DELETE/NOOP 四態操作、有向標記圖。</p>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
+                  <span class="text-emerald-300 font-semibold">Chhikara 2025</span>
+                  <span class="text-emerald-400 font-bold group-hover:underline">點擊研讀 &rarr;</span>
+                </div>
+              </button>
+
+              <!-- Card 3: A-Mem -->
+              <button onclick="goToSlide(5)" class="group cursor-pointer p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-blue-900/50 hover:border-blue-400 hover:bg-slate-850 hover:scale-[1.03] active:scale-95 transition-all text-left flex flex-col justify-between shadow-lg hover:shadow-blue-500/10">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-mono uppercase text-blue-400 font-bold tracking-wider">System 03</span>
+                    <span class="text-[11px] font-mono text-blue-500/70 group-hover:text-blue-400">P.06-07</span>
+                  </div>
+                  <h3 class="font-bold text-slate-100 mt-2 text-base md:text-lg group-hover:text-blue-300 transition-colors flex items-center justify-between">
+                    <span>A-Mem</span>
+                    <span class="text-sm opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-blue-400">&rarr;</span>
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">卡片盒（Zettelkasten）原子筆記、自主連結與反向記憶演化。</p>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
+                  <span class="text-blue-300 font-semibold">Xu 2025</span>
+                  <span class="text-blue-400 font-bold group-hover:underline">點擊研讀 &rarr;</span>
+                </div>
+              </button>
+
+              <!-- Card 4: ZEP -->
+              <button onclick="goToSlide(7)" class="group cursor-pointer p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-purple-900/50 hover:border-purple-400 hover:bg-slate-850 hover:scale-[1.03] active:scale-95 transition-all text-left flex flex-col justify-between shadow-lg hover:shadow-purple-500/10">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-mono uppercase text-purple-400 font-bold tracking-wider">System 04</span>
+                    <span class="text-[11px] font-mono text-purple-500/70 group-hover:text-purple-400">P.08-09</span>
+                  </div>
+                  <h3 class="font-bold text-slate-100 mt-2 text-base md:text-lg group-hover:text-purple-300 transition-colors flex items-center justify-between">
+                    <span>ZEP (Graphiti)</span>
+                    <span class="text-sm opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-purple-400">&rarr;</span>
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">雙時間軸模型、三層子圖、動態邊失效與多面檢索管線。</p>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
+                  <span class="text-purple-300 font-semibold">Rasmussen 2025</span>
+                  <span class="text-purple-400 font-bold group-hover:underline">點擊研讀 &rarr;</span>
+                </div>
+              </button>
+
+              <!-- Card 5: MemMachine -->
+              <button onclick="goToSlide(9)" class="group cursor-pointer p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-cyan-900/50 hover:border-cyan-400 hover:bg-slate-850 hover:scale-[1.03] active:scale-95 transition-all text-left flex flex-col justify-between shadow-lg hover:shadow-cyan-500/10">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-mono uppercase text-cyan-400 font-bold tracking-wider">System 05</span>
+                    <span class="text-[11px] font-mono text-cyan-500/70 group-hover:text-cyan-400">P.10-11</span>
+                  </div>
+                  <h3 class="font-bold text-slate-100 mt-2 text-base md:text-lg group-hover:text-cyan-300 transition-colors flex items-center justify-between">
+                    <span>MemMachine</span>
+                    <span class="text-sm opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-cyan-400">&rarr;</span>
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">真實情節非損保留、脈絡化擴展、Tool Tree 遲滯綁定解法。</p>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
+                  <span class="text-cyan-300 font-semibold">Wang 2026</span>
+                  <span class="text-cyan-400 font-bold group-hover:underline">點擊研讀 &rarr;</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Clickable Interactive Teaching Path -->
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between text-xs md:text-sm text-slate-300 gap-2">
+              <span class="font-bold text-cyan-400 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                快速章節跳轉：
+              </span>
+              <button onclick="goToSlide(1)" class="hover:text-amber-300 hover:underline cursor-pointer transition">1. 窗口物理限制 (P.02)</button>
+              <span class="text-slate-600">&rarr;</span>
+              <button onclick="goToSlide(3)" class="hover:text-emerald-300 hover:underline cursor-pointer transition">2. 密集與圖譜 (P.04)</button>
+              <span class="text-slate-600">&rarr;</span>
+              <button onclick="goToSlide(5)" class="hover:text-blue-300 hover:underline cursor-pointer transition">3. 卡片盒演化 (P.06)</button>
+              <span class="text-slate-600">&rarr;</span>
+              <button onclick="goToSlide(7)" class="hover:text-purple-300 hover:underline cursor-pointer transition">4. 雙時間圖譜 (P.08)</button>
+              <span class="text-slate-600">&rarr;</span>
+              <button onclick="goToSlide(9)" class="hover:text-cyan-300 hover:underline cursor-pointer transition">5. 真實情節保留 (P.10)</button>
+              <span class="text-slate-600">&rarr;</span>
+              <button onclick="goToSlide(11)" class="hover:text-indigo-300 hover:underline cursor-pointer font-bold transition">6. 對比矩陣 (P.12)</button>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 2,
+        title: "傳統 Context Window 的物理與行為極限",
+        subtitle: "最大架構窗口（MCW）與最大有效上下文窗口（MECW）之巨大落差",
+        category: "Foundational Limits",
+        wikiSource: "wiki/papers/context_is_what_you_need.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- Definition Card 1 -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <div class="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">Architectural Limit</div>
+                <h3 class="text-lg font-bold text-white">最大架構窗口 (MCW)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  模型廠商技術規格宣稱的極限輸入容量（如 128k、100 萬乃至 1,000 萬 tokens）。
+                </p>
+                <div class="mt-3 py-2 px-3 rounded-lg bg-amber-950/40 border border-amber-800/40 text-xs md:text-sm text-amber-200">
+                  僅代表工程實作允許塞入的 Token 上限，不保證推論輸出品質。
+                </div>
+              </div>
+
+              <!-- Definition Card 2 -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <div class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Empirical Usable Span</div>
+                <h3 class="text-lg font-bold text-white">最大有效窗口 (MECW)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  針對給定問題類型，追加輸入 Token 不引起模型輸出顯著退化的最長輸入範圍。
+                </p>
+                <div class="mt-3 py-2 px-3 rounded-lg bg-cyan-950/40 border border-cyan-800/40 text-xs md:text-sm text-cyan-200">
+                  MECW 是一組隨任務複雜度浮動的光譜，而非單一靜態常數。
+                </div>
+              </div>
+
+              <!-- Definition Card 3 -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <div class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Cognitive Analogy</div>
+                <h3 class="text-lg font-bold text-white">認知科學模型映射</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  Context Window 本質上近似於人類的「工作記憶（Working Memory）」，容量嚴苛受限。
+                </p>
+                <div class="mt-3 py-2 px-3 rounded-lg bg-purple-950/40 border border-purple-800/40 text-xs md:text-sm text-purple-200">
+                  將 Context Window 當作長期記憶（Long-term Memory）使用，必引發注意力崩塌。
+                </div>
+              </div>
+            </div>
+
+            <!-- Central Experimental Findings Card -->
+            <div class="p-5 rounded-2xl bg-slate-900/90 border border-rose-900/50 space-y-3">
+              <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2.5 gap-2">
+                <h4 class="text-base font-bold text-rose-300 flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                  實證檢測：11 款受測模型（開源 DeepSeek-R1、Llama-3.3 與閉源 GPT-4.1、GPT-5、Claude 3.5、Gemini 2.5）
+                </h4>
+                <span class="text-xs font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded border border-slate-800">
+                  樣本數: 66,000+ 筆, p-value &lt; 1.0e-172
+                </span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5 pt-1">
+                <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs font-medium">落差幅度 (MCW vs MECW)</div>
+                  <div class="text-xl md:text-2xl font-mono font-bold text-rose-400 mt-1">&gt; 99% 落差</div>
+                  <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">所有受測模型實際有效容量均遠低於廠商宣稱數值。</p>
+                </div>
+                <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs font-medium">早期退化門檻</div>
+                  <div class="text-xl md:text-2xl font-mono font-bold text-amber-400 mt-1">100 ~ 1,000 tokens</div>
+                  <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">少數頂尖模型 100 tokens 即失誤；大多 1,000 tokens 出現嚴重退化。</p>
+                </div>
+                <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs font-medium">長度對幻覺率影響</div>
+                  <div class="text-xl md:text-2xl font-mono font-bold text-rose-400 mt-1">幻覺率飆至 99%</div>
+                  <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">在僅 2,000 tokens 輸入時，部分模型準確度逼近 0%。</p>
+                </div>
+                <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs font-medium">超參數主導因子</div>
+                  <div class="text-xl md:text-2xl font-mono font-bold text-cyan-400 mt-1">Token 數最關鍵</div>
+                  <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">影響力遠高於 Temperature、top_p 或 Seed 變異。</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Note -->
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs md:text-sm text-slate-300">
+              <span class="font-bold text-cyan-400">💡 核心啟示：</span>
+              <span>單純的大窗口無法替代外部記憶架構；必須嚴格將推論 Working Memory 限制在 MECW 內，方能避免模型幻覺失控。</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 3,
+        title: "任務複雜度光譜與 Agent 級聯崩潰",
+        subtitle: "多步驟推理下的注意力發散機制與多 Agent 串聯鏈路雪崩",
+        category: "Foundational Limits",
+        wikiSource: "wiki/concepts/cascading_failures.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- 4 Task Types Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+              <div class="p-4 rounded-xl bg-slate-900/90 border border-emerald-900/50 space-y-1.5">
+                <div class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Task 1: 單一實體檢索</div>
+                <h4 class="font-bold text-slate-100 text-base">Needle-in-a-Haystack</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">查詢特定人物之物件數。耐受窗口最高，但即便此題型，亦無任何模型能抵達宣稱之 MCW。</p>
+                <div class="mt-2 text-xs text-emerald-300 font-mono font-semibold">退化臨界: 數萬 tokens</div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-900/90 border border-blue-900/50 space-y-1.5">
+                <div class="text-xs font-mono text-blue-400 font-bold uppercase tracking-wider">Task 2: 多目標檢索與求和</div>
+                <h4 class="font-bold text-slate-100 text-base">Needles-in-a-Haystack</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">檢索多個分散目標並求和。優秀推理模型會採取「先過濾出精簡事實清單，再加總」以減輕窗口負擔。</p>
+                <div class="mt-2 text-xs text-blue-300 font-mono font-semibold">模型分化劇烈</div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-900/90 border border-amber-900/50 space-y-1.5">
+                <div class="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">Task 3: 全域聚合統計</div>
+                <h4 class="font-bold text-slate-100 text-base">Summarization</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">全量物件總計。表現普遍差於 Task 2，因無法透過前置過濾減少後續加總的注意力開銷。</p>
+                <div class="mt-2 text-xs text-amber-300 font-mono font-semibold">退化臨界: 500~1,000 tokens</div>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-900/90 border border-rose-900/50 space-y-1.5">
+                <div class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">Task 4: 複合排序檢索</div>
+                <h4 class="font-bold text-slate-100 text-base">Find and Sort</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">過濾目標、按姓名字母排序後串接。衰退最為迅猛，在 1,000~1,500 tokens 時模型幾乎全線歸零。</p>
+                <div class="mt-2 text-xs text-rose-300 font-mono font-semibold">退化臨界: 100~500 tokens</div>
+              </div>
+            </div>
+
+            <!-- Mathematical Cascading Failures Box -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-red-900/70 flex flex-col md:flex-row gap-6 items-center">
+              <div class="flex-1 space-y-3">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-950 text-red-400 text-xs font-mono border border-red-800/60 font-bold">
+                  ⚠️ 系統風險: Cascading Failures 級聯崩潰
+                </div>
+                <h3 class="text-lg md:text-xl font-bold text-white">多 Agent 鏈路在長上下文過載下的數學雪崩</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  開發者常誤以為超大窗口可肆意在鏈路中堆疊歷史。但若各 Agent 因長上下文使單點成功率降為 <code class="text-amber-300 font-bold">70% (0.7)</code>，則一個 3-Agent 串聯鏈路整體成功率將暴跌：
+                </p>
+                <!-- Rendered Mathematical Formula -->
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 text-sm md:text-base text-center font-mono">
+                  $$0.7 \\times 0.7 \\times 0.7 = 34.3\\% \\quad (\\text{整體失敗率高達 } 65.7\\%)$$
+                </div>
+              </div>
+              <div class="w-full md:w-88 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5 text-xs md:text-sm">
+                <div class="text-slate-200 font-bold flex items-center gap-1.5">
+                  <span class="text-cyan-400 font-mono">🛡️</span>
+                  <span>架構解法原則：</span>
+                </div>
+                <div class="flex items-start gap-2 text-slate-300">
+                  <span class="text-cyan-400 font-bold font-mono">1.</span>
+                  <span><strong>Agent 裂變（Splitting Agents）</strong>：拆解為職責單一之子代理，限制各子代理 Context 在 MECW 內。</span>
+                </div>
+                <div class="flex items-start gap-2 text-slate-300">
+                  <span class="text-cyan-400 font-bold font-mono">2.</span>
+                  <span><strong>外部記憶層過濾</strong>：不傳遞原始全文，只檢索注入高純度事實。</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs md:text-sm text-slate-300">
+              <span class="font-bold text-cyan-400">結語：</span>
+              <span>純上下文難以擔綱長程記憶；外部動態記憶架構（Mem0、A-Mem、Zep、MemMachine）之必要性由此確立。</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 4,
+        title: "Mem0：生產級增量抽取與四態生命週期管理",
+        subtitle: "基於雙重脈絡注入與 LLM Tool Call 的高效率事實記憶架構",
+        category: "System 1: Mem0",
+        wikiSource: "wiki/papers/mem0.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- 2-Phase Pipeline Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Phase 1: Extraction -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Phase 1</span>
+                  <span class="text-xs text-slate-400 font-mono">雙重脈絡注入</span>
+                </div>
+                <h3 class="text-lg font-bold text-white">記憶萃取階段 (Extraction Phase)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  接收當前對話訊息對 <code class="text-slate-200 font-mono font-bold">(m_{t-1}, m_t)</code>，構建綜合 Prompt 兼顧全局主題與近期細節：
+                </p>
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-emerald-300 text-sm md:text-base text-center">
+                  $$P = \\left(S, \\{m_{t-m}, \\dots, m_{t-2}\\}, m_{t-1}, m_t\\right)$$
+                </div>
+                <ul class="text-xs md:text-sm text-slate-300 space-y-2 list-disc list-inside">
+                  <li><strong class="text-slate-100">非同步全局摘要 S</strong>：獨立模組定期更新，提供主題背景且不阻塞推論。</li>
+                  <li><strong class="text-slate-100">近期視窗 (m=10)</strong>：提供前 10 則未摘要之精確對話時間細節。</li>
+                  <li><strong class="text-slate-100">候選事實集合 $\\Omega$</strong>：萃取結構化候選事實集合：
+                    <div class="mt-1 text-center font-mono text-cyan-300">$$\\Omega = \\{\\omega_1, \\omega_2, \\dots, \\omega_n\\}$$</div>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Phase 2: Update Phase -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Phase 2</span>
+                  <span class="text-xs text-slate-400 font-mono">語意去重與衝突仲裁</span>
+                </div>
+                <h3 class="text-lg font-bold text-white">記憶更新階段 (Update Phase)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  對每個候選事實，向量檢索 Top-$s$ ($s=10$) 既有相似記憶，透過 Tool Call 由 LLM 決定操作：
+                </p>
+                <div class="grid grid-cols-2 gap-2.5 text-center text-xs md:text-sm font-mono pt-1">
+                  <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-emerald-300">
+                    <div class="font-bold text-sm">ADD (新增)</div>
+                    <div class="text-xs text-slate-400 mt-1">無相似記憶時生成唯一 ID</div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-blue-950/40 border border-blue-800/40 text-blue-300">
+                    <div class="font-bold text-sm">UPDATE (更新)</div>
+                    <div class="text-xs text-slate-400 mt-1">新事實資訊量更豐富時替換舊項</div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300">
+                    <div class="font-bold text-sm">DELETE (刪除)</div>
+                    <div class="text-xs text-slate-400 mt-1">新舊事實語意衝突時抹除舊記憶</div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-slate-800/70 border border-slate-700 text-slate-300">
+                    <div class="font-bold text-sm">NOOP (無操作)</div>
+                    <div class="text-xs text-slate-400 mt-1">事實重複或無實質價值時忽略</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Key Metric Strip -->
+            <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div class="text-xs md:text-sm text-slate-400">LOCOMO Multi-Hop F1 / J</div>
+                <div class="text-xl md:text-2xl font-mono font-bold text-emerald-400 mt-1">28.64 / 51.15%</div>
+                <div class="text-xs text-slate-400 mt-0.5">大幅領先 A-Mem (18.85%) 與 Zep (41.35%)</div>
+              </div>
+              <div>
+                <div class="text-xs md:text-sm text-slate-400">搜尋延遲 (Search Latency p95)</div>
+                <div class="text-xl md:text-2xl font-mono font-bold text-cyan-400 mt-1">0.200 秒</div>
+                <div class="text-xs text-slate-400 mt-0.5">對照 LangMem 59.8s、A-Mem 1.48s、Zep 0.77s</div>
+              </div>
+              <div>
+                <div class="text-xs md:text-sm text-slate-400">端到端總延遲 (p95 Total Latency)</div>
+                <div class="text-xl md:text-2xl font-mono font-bold text-emerald-400 mt-1">1.440 秒</div>
+                <div class="text-xs text-slate-400 mt-0.5">相較 Full-Context (17.11s) 降幅達 91.6%</div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-xs md:text-sm text-slate-300 flex items-center justify-between">
+              <span>儲存開銷：每段對話平均僅需 <strong>7k tokens</strong>，推論檢索僅注入約 <strong>1,764 tokens</strong> 關鍵事實。</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 5,
+        title: "Mem0 圖譜架構：有向標記圖與時序標記失效",
+        subtitle: "Mem0 圖譜擴充版（Graph-based，論文標記為 Mem0ᵍ，g 即代表 Graph）：以 Neo4j 建模實體關聯拓撲",
+        category: "System 1: Mem0 (圖譜記憶)",
+        wikiSource: "wiki/concepts/graph_memory_representations.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- Graph Model G=(V,E,L) -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <span class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Graph Model</span>
+                <h3 class="text-lg font-bold text-white">圖譜結構模型</h3>
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-center text-cyan-300">
+                  $$G = (V, E, L)$$
+                </div>
+                <ul class="text-xs md:text-sm text-slate-300 space-y-2 list-disc list-inside pt-1">
+                  <li><strong class="text-slate-100">節點 V (實體)</strong>：帶有實體類別、向量 $e_v \\in \\mathbb{R}^d$ 與時間戳記 $t_v$。</li>
+                  <li><strong class="text-slate-100">邊 E (關係)</strong>：三元組 $(v_s, r, v_d)$，帶有語意動詞標籤（如 <code class="text-cyan-300 font-mono">lives_in</code>）。</li>
+                  <li><strong class="text-slate-100">標籤 L</strong>：定義節點之語意約束。</li>
+                </ul>
+              </div>
+
+              <!-- Invalidation Mechanism -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-purple-900/50 space-y-2.5">
+                <span class="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">Consistency</span>
+                <h3 class="text-lg font-bold text-white">標記失效 (Temporal Invalidation)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  面對衝突資訊，Mem0 圖譜架構（Mem0 Graph）採「標記失效」而非物理刪除：
+                </p>
+                <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-800/40 text-xs md:text-sm text-purple-200">
+                  Update Resolver 將舊關係標記為 <strong>invalid</strong>，保留帶時間戳記的過期節點。
+                </div>
+                <div class="text-center font-mono text-cyan-300 text-xs md:text-sm">
+                  $$t_{\\text{invalid}} \\leftarrow t_{\\text{valid}}^{\\text{new}}$$
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  歷史軌跡完整保留，使模型能回溯狀態演進（如「搬家前住哪」vs「現在住哪」）。
+                </p>
+              </div>
+
+              <!-- Dual Retrieval -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <span class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Retrieval</span>
+                <h3 class="text-lg font-bold text-white">雙路整合檢索策略</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  結合實體導向與語意三元組兩大路徑：
+                </p>
+                <div class="space-y-2 text-xs md:text-sm text-slate-300">
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <strong class="text-cyan-400">1. 實體中心子圖</strong>：定位實體錨點節點，遍歷出入邊抽出相鄰子圖。
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <strong class="text-cyan-400">2. 語意三元組匹配</strong>：查詢編碼為稠密向量，與各三元組文本向量比對。
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Experimental Results & Trade-off -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+              <div class="text-sm font-bold text-slate-200">LOCOMO 實驗實證與 Trade-offs 對照</div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs md:text-sm">
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-emerald-900/40">
+                  <span class="text-emerald-400 font-bold">Temporal 任務全場第一</span>
+                  <div class="text-lg font-mono font-bold text-slate-100 mt-1">$$J = 58.13 \\pm 0.44\\%$$</div>
+                  <p class="text-xs text-slate-400 mt-1">超越純文字 Mem0 (55.51%)、Zep (49.31%) 與失能的 OpenAI (21.71%)。</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-amber-900/40">
+                  <span class="text-amber-400 font-bold">Multi-Hop 圖遍歷冗餘開銷</span>
+                  <div class="text-lg font-mono font-bold text-slate-100 mt-1">$$J = 47.19\\% \\quad (\\text{vs } 51.15\\%)$$</div>
+                  <p class="text-xs text-slate-400 mt-1">多跳推理中，圖譜遍歷可能引入過度關聯或冗餘節點干擾。</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <span class="text-slate-300 font-bold">儲存與延遲代價</span>
+                  <div class="text-lg font-mono font-bold text-slate-100 mt-1">14k tokens / p95 2.59s</div>
+                  <p class="text-xs text-slate-400 mt-1">儲存體積較純文字版 Mem0 翻倍，但構圖可在 1 分鐘內完成。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 6,
+        title: "A-Mem：卡片盒原子筆記與免綱要自組織",
+        subtitle: "借鑒 Zettelkasten 方法論，打破圖資料庫預定義 Schema 的僵化束縛",
+        category: "System 2: A-Mem",
+        wikiSource: "wiki/concepts/zettelkasten_agentic_memory.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- Philosophy Conflict -->
+            <div class="p-5 rounded-2xl bg-slate-900/90 border border-blue-900/50 flex flex-col md:flex-row items-center gap-5">
+              <div class="flex-1 space-y-2">
+                <span class="text-xs font-mono text-blue-400 font-bold uppercase tracking-wider">Paradigm Shift</span>
+                <h3 class="text-lg font-bold text-white">打破圖資料庫「預定義 Schema」之限制</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  Mem0 圖譜架構與傳統知識圖譜強依賴預設的實體類型與關係標籤。當代理人學習全新領域知識（如創新的數學演算法）時，預設 Schema 無法容納新組織模式。A-Mem 借鑒<strong>卡片盒筆記法（Zettelkasten）</strong>，全面實現動態免綱要自組織。
+                </p>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-950 border border-blue-800/40 text-xs md:text-sm font-mono text-blue-300 shrink-0 text-center">
+                Atomicity + Dynamic Indexing<br/>+ Virtual Boxes
+              </div>
+            </div>
+
+            <!-- Note Anatomy Grid -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3.5">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h4 class="text-sm md:text-base font-bold text-slate-100">原子筆記之七元組結構表徵：</h4>
+                <div class="text-cyan-300 text-sm md:text-base font-mono">
+                  $$m_i = \\{c_i, t_i, K_i, G_i, X_i, e_i, L_i\\}$$
+                </div>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs md:text-sm">
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="font-mono text-cyan-400 font-bold">ci & ti</div>
+                  <div class="text-slate-200 mt-1 font-medium">原始內容與時間戳記</div>
+                  <div class="text-xs text-slate-500 mt-1">未加工之真實字串</div>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="font-mono text-emerald-400 font-bold">Ki (Keywords)</div>
+                  <div class="text-slate-200 mt-1 font-medium">LLM 萃取之核心詞彙</div>
+                  <div class="text-xs text-slate-500 mt-1">名詞、動詞與核心術語</div>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="font-mono text-purple-400 font-bold">Gi (Tags)</div>
+                  <div class="text-slate-200 mt-1 font-medium">LLM 標註之分類標籤</div>
+                  <div class="text-xs text-slate-500 mt-1">範疇、格式與類型標籤</div>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="font-mono text-amber-400 font-bold">Xi (Context)</div>
+                  <div class="text-slate-200 mt-1 font-medium">LLM 生成上下文摘要</div>
+                  <div class="text-xs text-slate-500 mt-1">概述主題、論點與意圖</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm pt-1">
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <span class="font-mono text-blue-400 font-bold">ei (複合向量)</span>
+                  <div class="text-cyan-300">
+                    $$e_i = f_{\\text{enc}}[\\operatorname{concat}(c_i, K_i, G_i, X_i)]$$
+                  </div>
+                  <p class="text-xs text-slate-400">結合原始文本與高階語意之稠密向量表徵。</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <span class="font-mono text-blue-400 font-bold">Li (動態連結集)</span>
+                  <div class="text-slate-200 font-mono py-1">
+                    $$L_i = \\{id_1, id_2, \\dots, id_k\\}$$
+                  </div>
+                  <p class="text-xs text-slate-400">引用與關聯筆記 ID，允許多重虛擬盒子（Virtual Boxes）交叉隸屬。</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Open-Source Small Models Dominance -->
+            <div class="p-4 rounded-xl bg-slate-900 border border-blue-900/40 flex items-center justify-between text-xs md:text-sm">
+              <span class="text-slate-200 font-bold">開源小模型全場橫掃：</span>
+              <span class="text-slate-300">在 Qwen2.5 (1.5B/3B) 與 Llama 3.2 (1B/3B) 上，A-Mem 綜合排名達到全場第 <strong>1.0</strong>（Multi-Hop F1 領先 LoCoMo 逾一倍）。</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 7,
+        title: "A-Mem：自主連結生成與反向雙向記憶演化",
+        subtitle: "打破靜態儲存：新記憶反向觸發歷史近鄰筆記的屬性重構與語意聚類",
+        category: "System 2: A-Mem",
+        wikiSource: "wiki/concepts/memory_evolution_and_linking.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Step 1: Link Generation -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <span class="text-xs font-mono text-blue-400 font-bold uppercase tracking-wider">Step 1</span>
+                <h3 class="text-lg font-bold text-white">連結生成 (Link Generation, LG)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  新筆記 $m_n$ 寫入時，先以向量相似度篩選 Top-$k$ 近鄰集合 $M_{\\text{near}}^n$：
+                </p>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center text-cyan-300">
+                  $$L_i \\leftarrow \\operatorname{LLM}\\left(m_n \\parallel M_{\\text{near}}^n \\parallel P_{s2}\\right)$$
+                </div>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  超越單純向量距離，由 LLM 識別潛在因果、推論與概念延伸，動態建立網狀邊。
+                </p>
+              </div>
+
+              <!-- Step 2: Memory Evolution -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-purple-900/50 space-y-3">
+                <span class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Step 2: Core Novelty</span>
+                <h3 class="text-lg font-bold text-white">反向記憶演化 (Memory Evolution, ME)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  新經驗會反向刺激近鄰歷史筆記 $m_j$，由 LLM 重新審視並重構：
+                </p>
+                <!-- Mathematical Display Formula with user highlighted formula -->
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center text-purple-300">
+                  $$m_j^* \\leftarrow \\operatorname{LLM}\\left(m_n \\parallel M_{\\text{near}}^n \\setminus \\{m_j\\} \\parallel m_j \\parallel P_{s3}\\right)$$
+                </div>
+                <div class="flex gap-2 text-xs text-slate-300 pt-1 font-mono justify-center">
+                  <span class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700">Strengthen (強化)</span>
+                  <span class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700">Merge (合併)</span>
+                  <span class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700">Prune (修剪)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ablation Study Table & t-SNE -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Ablation Table -->
+              <div>
+                <div class="text-sm font-bold text-slate-200 mb-2">LoCoMo 消融實驗證實 (GPT-4o-mini)</div>
+                <table class="w-full text-xs md:text-sm text-left">
+                  <thead class="text-slate-400 border-b border-slate-800 font-mono text-xs">
+                    <tr>
+                      <th class="py-1.5">模組配置</th>
+                      <th class="py-1.5 text-center">Multi-Hop F1</th>
+                      <th class="py-1.5 text-center">Temporal F1</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800/60 font-mono">
+                    <tr>
+                      <td class="py-2 text-slate-400">無 LG 與 ME</td>
+                      <td class="py-2 text-center text-rose-400 font-bold">9.65</td>
+                      <td class="py-2 text-center text-rose-400 font-bold">24.55</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 text-slate-400">僅有連結生成 (w/o ME)</td>
+                      <td class="py-2 text-center text-amber-300 font-bold">21.35</td>
+                      <td class="py-2 text-center text-amber-300 font-bold">31.24</td>
+                    </tr>
+                    <tr class="bg-blue-950/30">
+                      <td class="py-2 text-blue-300 font-bold">完整 A-Mem (LG + ME)</td>
+                      <td class="py-2 text-center text-emerald-400 font-bold text-base">27.02</td>
+                      <td class="py-2 text-center text-emerald-400 font-bold text-base">45.85</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Scaling & Geometry Evidence -->
+              <div class="space-y-2.5 text-xs md:text-sm">
+                <div class="font-bold text-slate-200">幾何分佈與擴展性實證</div>
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 leading-relaxed">
+                  <strong class="text-blue-400">t-SNE 向量聚類</strong>：演化後的筆記在向量空間中自然湧現清晰緊密的群集（Coherent Clusters），相比未演化的散亂分佈具備更優拓撲。
+                </div>
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 leading-relaxed">
+                  <strong class="text-emerald-400">百萬級擴展</strong>：記憶庫自 1,000 筆擴展至 1,000,000 筆時，檢索時間僅自 $0.31\\,\\mu\\text{s}$ 微增至 <strong>$3.70\\,\\mu\\text{s}$</strong>（空間複雜度 $\\mathcal{O}(N)$ 線性）。
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 8,
+        title: "ZEP：Graphiti 時間感知知識圖譜與雙時間軸模型",
+        subtitle: "突破靜態 RAG 限制：真實世界時間 $T$ 與資料庫交易時間 $T'$ 的形式化統一",
+        category: "System 3: ZEP",
+        wikiSource: "wiki/concepts/temporal_knowledge_graphs.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- Bi-Temporal Architecture Card -->
+            <div class="p-5 rounded-2xl bg-slate-900/90 border border-purple-900/50 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Bi-Temporal Model</span>
+                <span class="text-xs font-mono text-slate-400">Graphiti KG Engine</span>
+              </div>
+              <h3 class="text-lg font-bold text-white">雙時間軸模型之四重時間戳記</h3>
+              <p class="text-sm text-slate-300 leading-relaxed">
+                Zep 為每條事實邊標註兩條時間維度，徹底解決時間語義漂移與資料庫審計難題：
+              </p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                <!-- Timeline T -->
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div class="text-sm font-bold text-cyan-400 flex items-center justify-between">
+                    <span>真實世界時間軸 (Chronological, T)</span>
+                    <span class="font-mono text-xs text-slate-400">$$T = [t_{\\text{valid}}, t_{\\text{invalid}}]$$</span>
+                  </div>
+                  <p class="text-xs md:text-sm text-slate-300 leading-relaxed">
+                    記錄事實於現實世界中實際成立的時間區間。利用訊息時間戳記 $t_{\\text{ref}}$ 將「兩週前」、「去年」等相對時間換算為標準 ISO 8601 日期。
+                  </p>
+                </div>
+                <!-- Timeline T' -->
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div class="text-sm font-bold text-amber-400 flex items-center justify-between">
+                    <span>交易時間軸 (Transactional, T')</span>
+                    <span class="font-mono text-xs text-slate-400">$$T' = [t'_{\\text{created}}, t'_{\\text{expired}}]$$</span>
+                  </div>
+                  <p class="text-xs md:text-sm text-slate-300 leading-relaxed">
+                    記錄系統資料庫的操作審計順序（寫入時間與廢棄時間）。依據 $T'$ 順序貫徹「新資訊優先」原則進行邊衝突仲裁。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Edge Invalidation & Safety Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Edge Invalidation -->
+              <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
+                <h4 class="text-base font-bold text-slate-100">邊失效機制 (Edge Invalidation)</h4>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  當新邊引入矛盾衝突時，系統將舊邊的 $t_{\\text{invalid}}$ 設為新邊的 $t_{\\text{valid}}$，標記其失效而非物理抹除：
+                </p>
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-center text-cyan-300 font-mono text-xs md:text-sm">
+                  $$t_{\\text{invalid}} \\leftarrow t_{\\text{valid}}^{\\text{new}}$$
+                </div>
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs md:text-sm text-emerald-300">
+                  保留完整演變歷史軌跡，使得「去年住哪」與「現在住哪」皆能精準回溯。
+                </div>
+              </div>
+
+              <!-- Safety Predefined Cypher -->
+              <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
+                <h4 class="text-base font-bold text-slate-100">工程防禦：預定義 Cypher 模板</h4>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  堅決杜絕 LLM 即時生成資料庫 Cypher 語句，全數採用預設模板寫入 Neo4j。
+                </p>
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs md:text-sm text-purple-300">
+                  徹底根除語法錯誤、查詢注入攻擊與資料庫幻覺，保證生產環境強韌度。
+                </div>
+              </div>
+            </div>
+
+            <!-- Benchmark Snapshot -->
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs md:text-sm text-slate-300">
+              <span class="font-bold text-cyan-400">DMR 基準領先：</span>
+              <span>在 MemGPT 主場之 DMR 基準中，Zep 準確率達到 <strong>94.8%</strong> (GPT-4-turbo) 與 <strong>98.2%</strong> (GPT-4o-mini)，超越 MemGPT (93.4%)。</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 9,
+        title: "ZEP：三層階層式子圖與多面檢索管線",
+        subtitle: "情節/語意/社群子圖、動態標籤傳播與 LongMemEval 超長對話突破",
+        category: "System 3: ZEP",
+        wikiSource: "wiki/papers/zep.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- 3 Subgraphs -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              <div class="p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+                <span class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Tier 1: Ge</span>
+                <h4 class="font-bold text-slate-100 text-base">情節子圖 (Episode)</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">
+                  儲存原始訊息（非損資料庫），雙向索引邊支援向後實體提取、向前出處溯源（Citation）。
+                </p>
+                <div class="mt-2 text-xs text-cyan-300 font-mono">對應心理學情節記憶</div>
+              </div>
+              <div class="p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+                <span class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Tier 2: Gs</span>
+                <h4 class="font-bold text-slate-100 text-base">語意實體子圖 (Semantic)</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">
+                  實體節點 + 語意邊。引入 Reflexion 反思校驗實體，支援超邊（Hyper-edges）表達多實體事實。
+                </p>
+                <div class="mt-2 text-xs text-purple-300 font-mono">對應心理學語意記憶</div>
+              </div>
+              <div class="p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+                <span class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Tier 3: Gc</span>
+                <h4 class="font-bold text-slate-100 text-base">社群子圖 (Community)</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">
+                  強連通實體聚類與高階摘要。採<strong>動態標籤傳播（Label Propagation）</strong>單步增量歸併，避免全局重新分群。
+                </p>
+                <div class="mt-2 text-xs text-emerald-300 font-mono">動態降低構圖延遲</div>
+              </div>
+            </div>
+
+            <!-- LongMemEval (115,000 tokens) Breakthrough Card -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-purple-900/60 space-y-3.5">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <h4 class="text-base font-bold text-purple-300">LongMemEval 企業超長對話基準 (平均 115,000 tokens)</h4>
+                <span class="text-xs font-mono text-emerald-400 bg-slate-950 px-2.5 py-1 rounded border border-slate-800">ICLR 2025</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5 text-xs md:text-sm">
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs">總分提升 (GPT-4o)</div>
+                  <div class="text-xl font-mono font-bold text-emerald-400 mt-1">71.2% (vs 60.2%)</div>
+                  <p class="text-xs text-slate-400 mt-1">相對 Full-Context 躍升 <strong>+18.5%</strong>。</p>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs">響應延遲驟降</div>
+                  <div class="text-xl font-mono font-bold text-cyan-400 mt-1">2.58s (vs 28.9s)</div>
+                  <p class="text-xs text-slate-400 mt-1">端到端延遲大幅下降 <strong>91.1%</strong>。</p>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs">Context 壓縮比</div>
+                  <div class="text-xl font-mono font-bold text-purple-400 mt-1">1.6k tokens</div>
+                  <p class="text-xs text-slate-400 mt-1">自 115k 壓縮至 1.6k (壓縮率逾 98%)。</p>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <div class="text-slate-400 text-xs">細項亮點</div>
+                  <div class="text-xl font-mono font-bold text-amber-300 mt-1">偏好追蹤 +184%</div>
+                  <p class="text-xs text-slate-400 mt-1">時序推理 +38.4%、跨會話 +30.7%。</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Retrieval Pipeline f = chi(rho(phi)) -->
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-300 flex flex-wrap items-center justify-between gap-2">
+              <span class="font-bold text-cyan-400">三階段檢索管線：</span>
+              <div class="text-cyan-300 font-mono">
+                $$f = \\chi(\\rho(\\phi))$$
+              </div>
+              <span class="text-xs md:text-sm text-slate-300">
+                <strong>搜尋 $\\phi$</strong>（語意+BM25+圖BFS）&rarr; <strong>重排 $\\rho$</strong>（RRF / Cross-Encoder）&rarr; <strong>組裝 $\\chi$</strong>（格式化 XML 帶時間區間 FACTS）。
+              </span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 10,
+        title: "MemMachine：真實情節保留與檢索主導律",
+        subtitle: "擺脫常態性 LLM 抽取的複合漂移：只要儲存保留 Ground Truth，檢索優化主導最終表現",
+        category: "System 4: MemMachine",
+        wikiSource: "wiki/papers/mem_machine.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- Philosophy Conflict Card -->
+            <div class="p-5 rounded-2xl bg-slate-900/90 border border-cyan-900/50 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Ground-Truth-Preserving</span>
+                <span class="text-xs font-mono text-slate-400">MemVerge, March 2026</span>
+              </div>
+              <h3 class="text-lg font-bold text-white">拒絕「常態性逐則抽取」的架構革命</h3>
+              <p class="text-sm text-slate-300 leading-relaxed">
+                Mem0 與 Zep 對每則訊息進行 LLM 抽取與摘要，引發兩大致命缺陷：<strong>高昂的寫入 Token 成本</strong>與<strong>滾雪球般的複合性抽取錯誤（Compounding Drift）</strong>。MemMachine 堅持保存原始對話情節（Raw Episodes），以 NLTK Punkt 進行句子級切塊與向量索引，寫入期完全零 LLM 負擔。
+              </p>
+            </div>
+
+            <!-- Empirical Proof: Retrieval Stage Dominates Accuracy -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3.5">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <h4 class="text-sm md:text-base font-bold text-slate-100">
+                  LongMemEvalS (115k) 嚴格消融實驗：各優化維度對最終準確率之獨立貢獻
+                </h4>
+                <span class="text-xs font-mono text-cyan-400 font-bold">$$\\Delta \\text{ Score}$$</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs md:text-sm">
+                <!-- Retrieval Stage Optimizations -->
+                <div class="space-y-2">
+                  <div class="font-bold text-emerald-400">檢索端優化（Retrieval-Stage Optimizations，累計效益巨大）</div>
+                  <div class="space-y-2 font-mono">
+                    <div class="flex justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <span class="text-slate-300">檢索深度調整 (k: 20 &rarr; 30)</span>
+                      <span class="text-emerald-400 font-bold text-base">+4.2%</span>
+                    </div>
+                    <div class="flex justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <span class="text-slate-300">上下文格式排版 (JSON-str 斷行隔離)</span>
+                      <span class="text-emerald-400 font-bold text-base">+2.0%</span>
+                    </div>
+                    <div class="flex justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <span class="text-slate-300">搜尋提示詞精修 (Edwin1 &rarr; Edwin3)</span>
+                      <span class="text-emerald-400 font-bold text-base">+1.8%</span>
+                    </div>
+                    <div class="flex justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <span class="text-slate-300">使用者前綴偏差修正 (prepend "user:")</span>
+                      <span class="text-emerald-400 font-bold text-base">+1.4%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Ingestion Stage vs Model Selection -->
+                <div class="space-y-2">
+                  <div class="font-bold text-amber-400">寫入端優化 vs. 模型選型協同</div>
+                  <div class="space-y-2 font-mono">
+                    <div class="flex justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <span class="text-slate-300">寫入端句子切塊 (Sentence Chunking)</span>
+                      <span class="text-amber-400 font-bold text-base">+0.8% (效益微小)</span>
+                    </div>
+                    <div class="flex justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <span class="text-slate-300">模型選型 (GPT-5 &rarr; GPT-5-mini 反超)</span>
+                      <span class="text-cyan-400 font-bold text-base">+2.6%</span>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/40 text-xs md:text-sm text-cyan-200 mt-2 font-sans leading-relaxed">
+                      💡 <strong>檢索主導律</strong>：只要儲存層保留真實情節，「如何召回與重排」之影響力遠超「如何抽取」。在寫入期投入巨資構建圖譜屬於過度優化錯誤階段。
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- LoCoMo SOTA & Token Saving Strip -->
+            <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 grid grid-cols-3 gap-3.5 text-center">
+              <div>
+                <div class="text-slate-400 text-xs md:text-sm">LoCoMo 總分 (gpt-4.1-mini)</div>
+                <div class="text-xl md:text-2xl font-mono font-bold text-cyan-400 mt-1">0.9169 (SOTA)</div>
+                <div class="text-xs text-slate-400 mt-0.5">公平對比 gpt-4o-mini 得 0.8747</div>
+              </div>
+              <div>
+                <div class="text-slate-400 text-xs md:text-sm">Token 消耗縮減 (vs Mem0)</div>
+                <div class="text-xl md:text-2xl font-mono font-bold text-emerald-400 mt-1">節省 ~80%</div>
+                <div class="text-xs text-slate-400 mt-0.5">4.20M vs 19.21M 輸入 Token</div>
+              </div>
+              <div>
+                <div class="text-slate-400 text-xs md:text-sm">LongMemEvalS 最佳準確率</div>
+                <div class="text-xl md:text-2xl font-mono font-bold text-cyan-400 mt-1">93.0%</div>
+                <div class="text-xs text-slate-400 mt-0.5">Pareto 最佳 C12 達 92.2% (僅耗 2.58M)</div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 11,
+        title: "MemMachine：脈絡化擴展與檢索代理人",
+        subtitle: "解決對話嵌入不相似性困境與多跳推理之遲滯綁定（Late Binding）問題",
+        category: "System 4: MemMachine",
+        wikiSource: "wiki/concepts/late_binding_and_retrieval_agents.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Mechanism 1: Contextualized Retrieval -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <span class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Mechanism 1</span>
+                <h3 class="text-lg font-bold text-white">脈絡化擴展檢索 (Contextualized Retrieval)</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  對話輪次高度互賴，核心答案往往缺乏前置條件（嵌入不相似困境）：
+                </p>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs md:text-sm text-slate-300">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    <span><strong>Nucleus Episode</strong>：句子向量精準命中核心對話輪次。</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    <span><strong>滑窗擴展 (Cluster)</strong>：自動抓取核心情節<strong>前 1 則、後 2 則</strong>相鄰對話拼裝為聚類。</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    <span><strong>Cross-Encoder 重排</strong>：評估聚類完整性後按時序排序注入。</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mechanism 2: Retrieval Agent Tool Tree -->
+              <div class="p-5 rounded-2xl bg-slate-900/90 border border-indigo-900/50 space-y-3">
+                <span class="text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">Mechanism 2</span>
+                <h3 class="text-lg font-bold text-white">解決多跳「遲滯綁定 (Late Binding)」</h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  後續跳檢索問題在前方實體未解析前無法構建（單次向量必敗）。Tool Tree 路由架構：
+                </p>
+                <div class="space-y-2 text-xs md:text-sm font-mono">
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                    <span class="text-indigo-300 font-bold">Multi-Hop &rarr; ChainOfQuery</span>
+                    <span class="text-slate-400 text-xs">迭代前向鏈 (上限 3 輪, 信心 &ge;0.8 停)</span>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                    <span class="text-indigo-300 font-bold">Multi-Entity &rarr; SplitQuery</span>
+                    <span class="text-slate-400 text-xs">並行分解 2~6 子查詢 (asyncio.gather)</span>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                    <span class="text-indigo-300 font-bold">Single-Hop &rarr; Direct Search</span>
+                    <span class="text-slate-400 text-xs">直接聲明式檢索，零多餘開銷</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Multi-Query Reranking & APO -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs md:text-sm">
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <div class="font-bold text-slate-200">多查詢串接重排 (Multi-Query)</div>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  最終重排器接收檢索歷程中產生的所有查詢串接，確保中間步驟提取的關鍵中介事實亦能在最終評分中名列前茅。
+                </p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <div class="font-bold text-slate-200">自動提示詞優化 (APO)</div>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  離線採用微軟 Agent Lightning APO 演算法，聯合調優所有 Agent 提示詞帶來 <strong>+6%</strong> 準確率提升，推論期零延遲與零 Token 開銷。
+                </p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <div class="font-bold text-emerald-400">多跳基準實證表現</div>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  <strong>HotpotQA hard</strong>: 93.2% 準確率 (92.31% 召回)；<strong>WikiMultiHop</strong> (隨機雜訊混雜): 92.6% 準確率 (+5.2%)。
+                </p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 12,
+        title: "五大記憶架構全維度對比與學術爭議並陳",
+        subtitle: "客觀保留各論文之實證指標、機制取向與相互評價之衝突觀點",
+        category: "Synthesis & Comparison",
+        wikiSource: "wiki/syntheses/architecture_comparison.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- Architecture Matrix Table -->
+            <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/90">
+              <table class="w-full text-left border-collapse text-xs md:text-sm">
+                <thead class="bg-slate-950 text-slate-300 font-mono text-xs border-b border-slate-800">
+                  <tr>
+                    <th class="p-3">維度 / 架構</th>
+                    <th class="p-3 text-amber-300 font-bold">傳統 Context</th>
+                    <th class="p-3 text-emerald-300 font-bold">Mem0 (向量 / 圖譜)</th>
+                    <th class="p-3 text-blue-300 font-bold">A-Mem</th>
+                    <th class="p-3 text-purple-300 font-bold">ZEP (Graphiti)</th>
+                    <th class="p-3 text-cyan-300 font-bold">MemMachine</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-sans leading-relaxed">
+                  <tr>
+                    <td class="p-2.5 font-mono font-bold text-slate-300">記憶載體</td>
+                    <td class="p-2.5 text-slate-400">推論期 KV-Cache</td>
+                    <td class="p-2.5 text-slate-300">向量庫 / Neo4j 三元組</td>
+                    <td class="p-2.5 text-slate-300">卡片盒原子七元組筆記</td>
+                    <td class="p-2.5 text-slate-300">三層階層式知識圖譜</td>
+                    <td class="p-2.5 text-cyan-200 font-bold">原始對話情節 + 句子索引</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2.5 font-mono font-bold text-slate-300">寫入與更新</td>
+                    <td class="p-2.5 text-slate-400">無狀態靜態拼接</td>
+                    <td class="p-2.5 text-slate-300">前向 Tool Call 四態操作</td>
+                    <td class="p-2.5 text-slate-300">新記憶反向觸發舊筆記演化</td>
+                    <td class="p-2.5 text-slate-300">雙時間軸邊失效 + 標籤傳播</td>
+                    <td class="p-2.5 text-cyan-200 font-bold">免常態抽取；SQL 畫像覆寫</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2.5 font-mono font-bold text-slate-300">檢索核心</td>
+                    <td class="p-2.5 text-slate-400">全注意力矩陣計算</td>
+                    <td class="p-2.5 text-slate-300">實體子圖 + 三元組匹配</td>
+                    <td class="p-2.5 text-slate-300">向量比對 + 虛擬盒子存取</td>
+                    <td class="p-2.5 text-slate-300">語意+BM25+圖BFS+重排</td>
+                    <td class="p-2.5 text-cyan-200 font-bold">核情節滑窗擴展 + Tool Tree</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2.5 font-mono font-bold text-slate-300">真實情節保留</td>
+                    <td class="p-2.5 text-emerald-400 font-semibold">完全保留 (全文)</td>
+                    <td class="p-2.5 text-amber-400">部分保留 (依賴抽取)</td>
+                    <td class="p-2.5 text-amber-400">部分保留 (依賴筆記)</td>
+                    <td class="p-2.5 text-amber-400">部分保留 (依賴事實與摘要)</td>
+                    <td class="p-2.5 text-emerald-400 font-bold">完全保留 (Ground-Truth)</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2.5 font-mono font-bold text-slate-300">LoCoMo 得分</td>
+                    <td class="p-2.5 text-slate-400">J: 72.9% / Base: 0.529</td>
+                    <td class="p-2.5 text-slate-300">J: 66.88% (0.6688)</td>
+                    <td class="p-2.5 text-slate-300">F1: 27.02 (J覆測: 48.38%)</td>
+                    <td class="p-2.5 text-slate-300">J: 65.99% (0.7514)</td>
+                    <td class="p-2.5 text-cyan-200 font-bold">0.8747 (mini) / 0.9169</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2.5 font-mono font-bold text-slate-300">Token 消耗</td>
+                    <td class="p-2.5 text-rose-400 font-semibold">超線性暴增</td>
+                    <td class="p-2.5 text-slate-300">推論約 1,764 tokens</td>
+                    <td class="p-2.5 text-slate-300">推論約 1,200~2,500 tokens</td>
+                    <td class="p-2.5 text-slate-300">儲存膨脹 &gt;600k (LOCOMO)</td>
+                    <td class="p-2.5 text-cyan-200 font-bold">較 Mem0 節省 ~80% 輸入</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Preserved Academic Controversies Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs md:text-sm">
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div class="font-bold text-blue-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                  爭端 1: 評測指標歧異 (A-Mem vs Mem0)
+                </div>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  A-Mem 主張在 ROUGE-L (44.27) 與開源小模型上取得 SOTA；Mem0 團隊覆測指出在 LLM-as-a-Judge ($J$) 嚴格事實評判下，A-Mem 僅得 48.38% (多跳 18.85%)，認為詞彙重疊掩蓋了事實錯誤。
+                </p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div class="font-bold text-purple-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                  爭端 2: 儲存膨脹與構圖延遲 (Zep vs Mem0)
+                </div>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  Mem0 批評 Zep 在節點全量快取摘要導致單會話膨脹逾 600k tokens 且構圖需數小時；Zep 則以 115k 企業對話實證展示 Context 壓縮至 1.6k (98% 壓縮率) 且得分達 71.2%，各具擅長場景。
+                </p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div class="font-bold text-cyan-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                  爭端 3: 寫入抽取 vs 檢索主導 (MemMachine)
+                </div>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  MemMachine 實證寫入端切塊僅帶來 +0.8% 增益，而檢索端優化帶來 +4.2%，主張拒絕常態性 LLM 抽取、保留 Ground Truth，在大幅縮減 80% Token 下反登 LoCoMo (0.9169) 榜首。
+                </p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 13,
+        title: "系統工程實踐指南與研究生研究前沿",
+        subtitle: "架構選型決策樹、Prompt 緩存邊界與未來多模態記憶展望",
+        category: "Synthesis & Outlook",
+        wikiSource: "wiki/syntheses/architecture_comparison.md",
+        render: () => `
+          <div class="slide-enter flex flex-col justify-between h-full space-y-4">
+            <!-- Decision Guidance Tree -->
+            <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3.5">
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                AI 代理人記憶系統選型決策指南 (Engineering Decision Framework)
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5 text-xs md:text-sm">
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <div class="font-bold text-emerald-300 text-sm">選擇 Mem0 (向量或圖譜)</div>
+                  <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    極致低延遲互動代理人（如客服聊天機器人、個人助理），需要毫秒級搜尋與輕量儲存。
+                  </p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <div class="font-bold text-blue-300 text-sm">選擇 A-Mem</div>
+                  <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    部署於邊緣端或以開源小模型（Qwen/Llama 1B~3B）驅動的代理人，知識領域高度動態且無固定 Schema。
+                  </p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <div class="font-bold text-purple-300 text-sm">選擇 ZEP (Graphiti)</div>
+                  <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    企業超長對話（10 萬 tokens 以上）、重度時序推理、複雜合規審計與多實體交叉關聯。
+                  </p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <div class="font-bold text-cyan-300 text-sm">選擇 MemMachine</div>
+                  <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    對事實嚴謹性有嚴格要求（醫療、法律、金融），追求極致 Token 成本控制，需解決多跳遲滯綁定。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Future Research Frontiers -->
+            <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+              <h4 class="text-sm md:text-base font-bold text-slate-200">研究生前沿研究方向 (Open Research Questions)</h4>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs md:text-sm">
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <span class="font-mono text-cyan-400 font-bold">1. 程序記憶 (Procedural Memory)</span>
+                  <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    現有系統專注於情節與語意記憶；如何將代理人成功的工具調用序列與工作流反思抽象為可重用的動作模式？
+                  </p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <span class="font-mono text-cyan-400 font-bold">2. 自適應檢索深度 (Adaptive k)</span>
+                  <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    實證顯示最優檢索深度 $k$ 強烈依賴模型與題型。如何依據問題複雜度與信心動態調整 $k$ 以避免噪音干擾？
+                  </p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <span class="font-mono text-cyan-400 font-bold">3. 多模態記憶與生命週期治理</span>
+                  <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    超越純文本對話，跨越影像、音訊與 UI 操作狀態的統一記憶索引，以及模擬人類艾賓浩斯機制的自適應遺忘。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Concluding Banner -->
+            <div class="p-4 rounded-xl bg-gradient-to-r from-cyan-950/70 via-slate-900 to-emerald-950/70 border border-slate-800 flex items-center justify-between text-xs md:text-sm">
+              <span class="text-slate-100 font-medium">🎯 總結：記憶系統是生產級 AI 代理人的第一基石。掌握 Working Memory 與 Long-Term Memory 的分工，方能跨越上下文視窗的物理桎梏。</span>
+              <button onclick="goToSlide(0)" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 font-mono text-xs md:text-sm transition cursor-pointer font-bold shrink-0 ml-4">
+                回到首頁 &uarr;
+              </button>
+            </div>
+          </div>
+        `
+      }
+    ];
+
+    let currentSlide = 0;
+    const totalSlides = slidesData.length;
+
+    function renderMath() {
+      if (typeof renderMathInElement === 'function') {
+        const container = document.getElementById('slideContent');
+        if (container) {
+          try {
+            renderMathInElement(container, {
+              delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false },
+                { left: '\\[', right: '\\]', display: true },
+                { left: '\\(', right: '\\)', display: false }
+              ],
+              throwOnError: false,
+              errorColor: '#f43f5e'
+            });
+          } catch (e) {
+            console.warn('KaTeX render warning:', e);
+          }
+        }
+      }
+    }
+
+    function renderSlide() {
+      const slide = slidesData[currentSlide];
+      const container = document.getElementById('slideContent');
+      
+      // Update top header and indicators
+      document.getElementById('slideIndicator').textContent = `${String(currentSlide + 1).padStart(2, '0')} / ${String(totalSlides).padStart(2, '0')}`;
+      document.getElementById('slideHeaderTopic').textContent = `${slide.category} · ${slide.title}`;
+      document.getElementById('progressBar').style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+      document.getElementById('wikiSourceBadge').textContent = `來源: ${slide.wikiSource}`;
+      
+      // Button states
+      document.getElementById('prevBtn').disabled = currentSlide === 0;
+      document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+
+      // Render content with fixed min-height header to guarantee 100% unified title height across all slides
+      container.innerHTML = `
+        <div class="w-full flex items-start justify-between border-b border-slate-800 pb-3 mb-4 min-h-[82px] md:min-h-[88px] shrink-0">
+          <div class="space-y-0.5">
+            <div class="text-xs md:text-sm font-mono text-cyan-400 uppercase tracking-wider font-bold leading-none mb-1">${slide.category}</div>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-tight">${slide.title}</h2>
+            <p class="text-xs md:text-sm text-slate-300 mt-1">${slide.subtitle}</p>
+          </div>
+          <span class="hidden sm:inline-flex items-center font-mono text-xs md:text-sm text-cyan-400 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 font-bold shrink-0 ml-4">
+            Slide ${currentSlide + 1}
+          </span>
+        </div>
+        <div class="flex-1 overflow-y-auto pr-1">
+          ${slide.render()}
+        </div>
+      `;
+
+      // Update outline drawer active state
+      updateOutlineActive();
+
+      // Render math equations
+      renderMath();
+      setTimeout(renderMath, 60);
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        currentSlide++;
+        renderSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        renderSlide();
+      }
+    }
+
+    function goToSlide(index) {
+      if (index >= 0 && index < totalSlides) {
+        currentSlide = index;
+        renderSlide();
+        closeOutline();
+      }
+    }
+
+    function toggleOutline() {
+      const drawer = document.getElementById('outlineDrawer');
+      drawer.classList.toggle('hidden');
+    }
+
+    function closeOutline() {
+      document.getElementById('outlineDrawer').classList.add('hidden');
+    }
+
+    function initOutline() {
+      const list = document.getElementById('outlineList');
+      list.innerHTML = slidesData.map((s, idx) => `
+        <button onclick="goToSlide(${idx})" id="outline-item-${idx}" class="w-full text-left p-3 rounded-xl hover:bg-slate-800 transition flex items-center justify-between text-slate-300 hover:text-white border border-transparent hover:border-slate-700 cursor-pointer">
+          <div class="flex items-center gap-2.5 truncate">
+            <span class="font-mono text-xs text-cyan-400 font-bold w-6">${String(idx + 1).padStart(2, '0')}</span>
+            <span class="truncate font-medium text-xs md:text-sm">${s.title}</span>
+          </div>
+          <span class="text-xs font-mono text-slate-500 shrink-0 ml-2">${s.wikiSource.replace('wiki/', '')}</span>
+        </button>
+      `).join('');
+    }
+
+    function updateOutlineActive() {
+      slidesData.forEach((_, idx) => {
+        const item = document.getElementById(`outline-item-${idx}`);
+        if (item) {
+          if (idx === currentSlide) {
+            item.classList.add('bg-cyan-950/70', 'border-cyan-800/60', 'text-cyan-200');
+            item.classList.remove('text-slate-300');
+          } else {
+            item.classList.remove('bg-cyan-950/70', 'border-cyan-800/60', 'text-cyan-200');
+            item.classList.add('text-slate-300');
+          }
+        }
+      });
+    }
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'o' || e.key === 'O') {
+        toggleOutline();
+      } else if (e.key === 'Escape') {
+        closeOutline();
+      }
+    });
+
+    // Initialize
+    initOutline();
+    renderSlide();
+    window.addEventListener('load', renderMath);
+    document.addEventListener('DOMContentLoaded', renderMath);
+  </script>
+</body>
+</html>

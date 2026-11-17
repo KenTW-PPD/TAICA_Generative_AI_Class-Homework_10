@@ -1,5 +1,21 @@
 # Ingest 與 Lint 運作日誌
 
+## Release: Interactive Educational Presentation (slides_html/index.html)
+- **處理日期**：2026-11-17
+- **生成檔案**：`slides_html/index.html` (互動式教學型 HTML 簡報)
+- **覆蓋文獻**：5 篇核心文獻全數納入（Context 瓶頸、Mem0、A-Mem、ZEP、MemMachine）
+- **頁面規格**：共 13 頁 16:9 比例深色學術風格簡報，內建鍵盤導航（← / → / 空格）、大綱抽屜（O / Esc）、進度條與 KaTeX 數學排版渲染。
+- **出處標記**：每頁底部具備對應 `wiki/` 來源檔案精確標註，100% 源自知識庫。
+
+### Lint 與整合檢查結果
+- [x] **結構檢查**：單一 HTML 檔案包含完整 Tailwind CSS CDN、KaTeX CDN 與 Vanilla JS 控制邏輯，無任何標籤錯誤或未閉合語法。
+- [x] **出處檢查**：全數 13 頁投影片皆具備清晰的 `wikiSource` 標記與底部 Badge，無任何外部推測或無來源資訊。
+- [x] **並陳檢查**：第 12 與 13 頁完整收錄多架構對照矩陣，保留評測指標歧異（F1 vs Judge）、儲存膨脹爭端與寫入抽取 vs 檢索主導之三大爭端。
+- [x] **互動性檢查**：鍵盤事件、按鈕切換、大綱快速跳轉與自適應內部捲動均正常運作。
+- **狀態**：全數通過 (PASSED)。
+
+---
+
 ## Ingest: MemMachine: A Ground-Truth-Preserving Memory System for Personalized AI Agents (2026)
 - **處理日期**：2026-11-17
 - **Ingest 來源**：`raw/MemMachine.pdf` (來源: MemMachine.pdf)
