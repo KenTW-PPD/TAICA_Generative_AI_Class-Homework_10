@@ -1,5 +1,27 @@
 # Ingest 與 Lint 運作日誌
 
+## Ingest: MemMachine: A Ground-Truth-Preserving Memory System for Personalized AI Agents (2026)
+- **處理日期**：2026-11-17
+- **Ingest 來源**：`raw/MemMachine.pdf` (來源: MemMachine.pdf)
+- **異動與新增檔案清單**：
+  - `wiki/papers/mem_machine.md` (新增單篇文獻深度筆記)
+  - `wiki/concepts/ground_truth_preserving_architecture.md` (新增真實情節非損保存與檢索端主導律概念頁)
+  - `wiki/concepts/contextualized_retrieval.md` (新增脈絡化擴展檢索與多查詢重排概念頁)
+  - `wiki/concepts/late_binding_and_retrieval_agents.md` (新增遲滯綁定難題與 Tool Tree 檢索代理人概念頁)
+  - `wiki/concepts/memory_latency_cost_tradeoffs.md` (更新加入 MemMachine 節省 80% Token 與 Pareto 最優實證)
+  - `wiki/syntheses/architecture_comparison.md` (更新多架構對比表，填入 MemMachine 完整規格並深度並陳壓縮 vs 保留之設計張力)
+  - `wiki/index.md` (更新首頁架構導圖、五大架構閱讀路徑與全頁面索引)
+  - `wiki/log.md` (追加日誌記錄)
+
+### Lint 檢查結果
+- [x] **連結檢查（Link Check）**：所有雙向連結語法皆正確對應到 `wiki/` 實體 `.md` 檔案，無任何斷鏈。
+- [x] **孤島檢查（Island Check）**：所有 `wiki/` 頁面皆已登記於 `wiki/index.md`，且每一內容頁面皆引用 `raw/` 下之出處。
+- [x] **出處檢查（Citation Check）**：逐段具備 `(來源: MemMachine.pdf, <章節/頁碼>)`、`(來源: ZEP.pdf, <章節/頁碼>)`、`(來源: Mem0.pdf, <章節/頁碼>)`、`(來源: A-Mem.pdf, <章節/頁碼>)` 或 `(來源: Context_Is_What_You_Need.pdf, <章節/頁碼>)` 精確標記；未出現於原文之細節標註 `[資料不足，待補充]`，符合零幻覺規範。
+- [x] **並陳檢查（Balance Check）**：對比表與並陳章節完整保留了 MemMachine「保留真實情節、檢索優化主導」之突破性成果，同時客觀對照了 Mem0、Zep 與 A-Mem 在各異任務與指標上的優劣勢與爭議，未偏廢任何機制。
+- **Lint 狀態**：全數通過 (PASSED)。
+
+---
+
 ## Ingest: ZEP: A Temporal Knowledge Graph Architecture for Agent Memory (2025)
 - **處理日期**：2026-11-17
 - **Ingest 來源**：`raw/ZEP.pdf` (來源: ZEP.pdf)
