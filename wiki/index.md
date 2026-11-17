@@ -13,6 +13,7 @@ flowchart TD
     
     B --> M0["生產級記憶系統<br/>(Mem0 / Mem0^g)"]
     B --> AM["卡片盒演化記憶系統<br/>(A-Mem)"]
+    B --> ZP["時間感知知識圖譜<br/>(Zep / Graphiti)"]
     
     M0 --> D["四態操作生命週期<br/>(Dynamic Operations)"]
     M0 --> E["有向圖譜與雙路檢索<br/>(Graph Representations)"]
@@ -20,10 +21,17 @@ flowchart TD
     AM --> ZK["卡片盒原子筆記模型<br/>(Zettelkasten Memory)"]
     AM --> ME["自主連結與反向演化<br/>(Linking & Evolution)"]
     
+    ZP --> TG["雙時間軸與邊失效<br/>(Temporal Knowledge Graphs)"]
+    ZP --> HG["三層階層式子圖<br/>(Hierarchical Subgraphs)"]
+    ZP --> MR["多面檢索與重排<br/>(Multi-Faceted Retrieval)"]
+    
     D --> TR["多維度工程權衡<br/>(Latency-Cost-Accuracy)"]
     E --> TR
     ZK --> TR
     ME --> TR
+    TG --> TR
+    HG --> TR
+    MR --> TR
     C --> TR
     
     TR --> COMP["多架構橫向對比矩陣<br/>(Architecture Comparison)"]
@@ -41,8 +49,13 @@ flowchart TD
    - 閱讀 [[a_mem]] 掌握如何借鑒卡片盒筆記法（Zettelkasten）打破圖資料庫預定義 Schema 的僵化限制 (來源: A-Mem.pdf, Section 1/Page 1-2, Section 3/Page 3-5)。
    - 深入概念條目 [[zettelkasten_agentic_memory]]，理解原子筆記之七元組結構與多重虛擬盒子（Virtual Boxes）機制 (來源: A-Mem.pdf, Section 3.1/Page 4, Figure 2/Page 3)。
    - 深入概念條目 [[memory_evolution_and_linking]]，掌握新經驗寫入如何反向促使歷史鄰近筆記進行屬性重寫與動態網絡演化 (來源: A-Mem.pdf, Section 3.2-3.3/Page 4-5, Table 3/Page 7)。
-4. **第四步：系統工程評估與多架構橫向綜合對比**
-   - 研讀 [[memory_latency_cost_tradeoffs]]，分析 Full-Context、RAG、Dense Memory、Graph Memory、演化筆記在延遲、Token 消耗與準確率間的 Trade-offs (來源: Mem0.pdf, Table 2/Page 11; A-Mem.pdf, Table 1/Page 6, Table 4/Page 8)。
+4. **第四步：研讀時間感知階層式圖譜記憶（Zep / Graphiti）**
+   - 閱讀 [[zep]] 掌握專門針對超長對話（115k tokens）與企業數據的時間感知知識圖譜架構 (來源: ZEP.pdf, Abstract/Page 1, Section 2/Page 2-4)。
+   - 深入概念條目 [[temporal_knowledge_graphs]]，掌握真實世界時間 $T$ 與系統交易時間 $T'$ 雙時間軸及四重時間戳記與邊失效（Edge Invalidation）(來源: ZEP.pdf, Section 2.1/Page 2, Section 2.2.3/Page 3)。
+   - 深入概念條目 [[hierarchical_memory_subgraphs]]，掌握情節子圖、語意實體子圖、社群子圖之階層劃分與動態標籤傳播（Dynamic Label Propagation）演算法 (來源: ZEP.pdf, Section 2/Page 2, Section 2.3/Page 4)。
+   - 深入概念條目 [[multi_faceted_graph_retrieval]]，掌握複合搜尋（餘弦+BM25+圖BFS）、多策略重排與 XML 上下文組裝管線 (來源: ZEP.pdf, Section 3/Page 4-5)。
+5. **第五步：系統工程評估與多架構橫向綜合對比**
+   - 研讀 [[memory_latency_cost_tradeoffs]]，分析 Full-Context、RAG、Mem0、A-Mem、Zep 在延遲、Token 消耗與準確率間的 Trade-offs (來源: Mem0.pdf, Table 2/Page 11; A-Mem.pdf, Table 4/Page 8; ZEP.pdf, Table 2/Page 7)。
    - 查閱 [[architecture_comparison]]，掌握各世代記憶管理機制之存儲載體、生命週期操作，以及跨團隊評測指標分歧之完整並陳對照。
 
 ---
@@ -53,6 +66,7 @@ flowchart TD
 - [[context_is_what_you_need]] — *Context Is What You Need: The Maximum Effective Context Window for Real World Limits of LLMs* (Norman Paulsen, 2025) (來源: Context_Is_What_You_Need.pdf, Page 1)
 - [[mem0]] — *Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory* (Prateek Chhikara et al., 2025) (來源: Mem0.pdf, Page 1)
 - [[a_mem]] — *A-Mem: Agentic Memory for LLM Agents* (Wujiang Xu et al., 2025) (來源: A-Mem.pdf, Page 1)
+- [[zep]] — *ZEP: A Temporal Knowledge Graph Architecture for Agent Memory* (Preston Rasmussen et al., 2025) (來源: ZEP.pdf, Page 1)
 
 ### 核心概念條目（Concepts）
 - [[mecw_vs_mcw]] — 最大有效上下文窗口（MECW）與最大架構窗口（MCW）定義、光譜特性與實證落差 (來源: Context_Is_What_You_Need.pdf, Section 1/Page 1-2, Appendix A2.1/Page 14)
@@ -62,7 +76,10 @@ flowchart TD
 - [[graph_memory_representations]] — 有向標記圖表徵、雙路檢索與時序失效機制 (來源: Mem0.pdf, Section 2.2/Page 5-6)
 - [[zettelkasten_agentic_memory]] — 卡片盒式原子筆記模型、七元組屬性與多重虛擬盒子 (來源: A-Mem.pdf, Section 3.1/Page 4, Figure 2/Page 3)
 - [[memory_evolution_and_linking]] — 自主連結生成（LG）與反向歷史記憶演化（ME）機制 (來源: A-Mem.pdf, Section 3.2-3.3/Page 4-5, Table 3/Page 7)
-- [[memory_latency_cost_tradeoffs]] — 記憶系統在品質、搜尋延遲、總延遲與 Token 儲存體積之權衡矩陣 (來源: Mem0.pdf, Table 2/Page 11; A-Mem.pdf, Table 4/Page 8)
+- [[temporal_knowledge_graphs]] — 雙時間軸模型（$T$ 與 $T'$）與邊失效機制 (來源: ZEP.pdf, Section 2.1/Page 2, Section 2.2.3/Page 3)
+- [[hierarchical_memory_subgraphs]] — 情節、語意實體與社群三層子圖及動態標籤傳播 (來源: ZEP.pdf, Section 2/Page 2, Section 2.3/Page 4)
+- [[multi_faceted_graph_retrieval]] — 多路搜尋（語意+BM25+圖BFS）、重排與 XML 上下文組裝 (來源: ZEP.pdf, Section 3/Page 4-5)
+- [[memory_latency_cost_tradeoffs]] — 記憶系統在品質、搜尋延遲、總延遲與 Token 儲存體積之權衡矩陣 (來源: Mem0.pdf, Table 2/Page 11; A-Mem.pdf, Table 4/Page 8; ZEP.pdf, Table 2/Page 7)
 
 ### 跨架構綜合分析（Syntheses）
 - [[architecture_comparison]] — 傳統 Context Window、Mem0/Mem0^g、A-Mem、ZEP 與 MemMachine 多維度並陳對比表
@@ -76,3 +93,4 @@ flowchart TD
 - `raw/Context_Is_What_You_Need.pdf` — *Context Is What You Need: The Maximum Effective Context Window for Real World Limits of LLMs* (Norman Paulsen, 2025)
 - `raw/Mem0.pdf` — *Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory* (Prateek Chhikara et al., 2025)
 - `raw/A-Mem.pdf` — *A-Mem: Agentic Memory for LLM Agents* (Wujiang Xu et al., 2025)
+- `raw/ZEP.pdf` — *ZEP: A Temporal Knowledge Graph Architecture for Agent Memory* (Preston Rasmussen et al., 2025)

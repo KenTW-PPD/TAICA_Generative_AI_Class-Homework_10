@@ -1,5 +1,26 @@
 # Ingest 與 Lint 運作日誌
 
+## Ingest: ZEP: A Temporal Knowledge Graph Architecture for Agent Memory (2025)
+- **處理日期**：2026-11-17
+- **Ingest 來源**：`raw/ZEP.pdf` (來源: ZEP.pdf)
+- **異動與新增檔案清單**：
+  - `wiki/papers/zep.md` (新增單篇文獻深度筆記)
+  - `wiki/concepts/temporal_knowledge_graphs.md` (新增雙時間軸模型與邊失效機制概念頁)
+  - `wiki/concepts/hierarchical_memory_subgraphs.md` (新增三層記憶子圖與動態標籤傳播概念頁)
+  - `wiki/concepts/multi_faceted_graph_retrieval.md` (新增多面搜尋、多策略重排與 XML 組裝概念頁)
+  - `wiki/syntheses/architecture_comparison.md` (更新多架構對比表，填入 Zep 規格並完整並陳 Zep 原文與 Mem0 覆測爭議)
+  - `wiki/index.md` (更新首頁架構導圖、閱讀路徑與全頁面索引)
+  - `wiki/log.md` (追加日誌記錄)
+
+### Lint 檢查結果
+- [x] **連結檢查（Link Check）**：所有雙向連結語法皆正確對應到 `wiki/` 實體 `.md` 檔案，無任何斷鏈。
+- [x] **孤島檢查（Island Check）**：所有 `wiki/` 頁面皆已登記於 `wiki/index.md`，且每一內容頁面皆引用 `raw/` 下之出處。
+- [x] **出處檢查（Citation Check）**：逐段具備 `(來源: ZEP.pdf, <章節/頁碼>)`、`(來源: Mem0.pdf, <章節/頁碼>)`、`(來源: A-Mem.pdf, <章節/頁碼>)` 或 `(來源: Context_Is_What_You_Need.pdf, <章節/頁碼>)` 精確標記；未出現於原文之細節標註 `[資料不足，待補充]`，符合零幻覺規範。
+- [x] **並陳檢查（Balance Check）**：對比表與並陳章節完整保留了 Zep 在 LongMemEval 超長上下文（115k tokens）取得 71.2%（+18.5%）的實證主張，同時完整並陳了 Mem0 團隊在 LOCOMO 上質疑 Zep 儲存膨脹逾 20 倍（>600k tokens）與構圖延遲數小時之反向觀點，未偏廢任何機制。
+- **Lint 狀態**：全數通過 (PASSED)。
+
+---
+
 ## Ingest: A-Mem: Agentic Memory for LLM Agents (2025)
 - **處理日期**：2026-11-17
 - **Ingest 來源**：`raw/A-Mem.pdf` (來源: A-Mem.pdf)
