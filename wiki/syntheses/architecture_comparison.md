@@ -6,50 +6,51 @@
 
 | 維度 / 架構 | 傳統 Context Window（In-Context / Context Stuffing） | Mem0 / Mem0^g | A-Mem | ZEP | MemMachine |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **文獻出處** | [[context_is_what_you_need]] (來源: Context_Is_What_You_Need.pdf) | [[mem0]] (來源: Mem0.pdf) | [待 Ingest 補充] (文獻提及: A-Mem, LOCOMO J=48.38%) (來源: Mem0.pdf, Table 2/Page 11) | [待 Ingest 補充] (文獻提及: Zep, LOCOMO J=65.99%) (來源: Mem0.pdf, Table 2/Page 11) | [待 Ingest 補充] |
-| **記憶載體與儲存位置** | 推論期上下文（KV-Cache / Prompt 文本），無外部儲存 (來源: Context_Is_What_You_Need.pdf, Section 1/Page 2, Section 3.2/Page 6) | **外部專屬資料庫**：<br/>- Mem0: 稠密向量資料庫 (Dense Vector DB)<br/>- Mem0^g: Neo4j 圖資料庫（節點為實體、邊為關係三元組）(來源: Mem0.pdf, Section 2.1-2.2/Page 4-6) | [待 Ingest 補充] | [待 Ingest 補充] | [待 Ingest 補充] |
-| **寫入與萃取機制（Extraction）** | 靜態拼接（Prompt Concatenation）；推論時單次傳入全部內容 (來源: Context_Is_What_You_Need.pdf, Section 3.2/Page 6) | **雙階段增量萃取**：<br/>結合非同步全局摘要 $S$、近期訊息視窗（$m=10$）與當前訊息對 $(m_{t-1}, m_t)$，由 LLM 萃取結構化候選事實清單 $\Omega$ (來源: Mem0.pdf, Section 2.1/Page 3-4) | [待 Ingest 補充] | [待 Ingest 補充] | [待 Ingest 補充] |
-| **更新與整合機制（Consolidation）** | 無動態更新機制（Stateless）；無狀態覆寫，外部整合機制標註為 `[資料不足，待補充]` (來源: Context_Is_What_You_Need.pdf, Section 3.1-3.2/Page 5-6) | **LLM 工具調用四態操作**：<br/>- 向量檢索 Top-$s$ 既有記憶，由 LLM 決定 ADD / UPDATE / DELETE / NOOP (來源: Mem0.pdf, Section 2.1/Page 4, Appendix B/Page 21)<br/>- Mem0^g 衝突時採「標記失效」（Invalidate）保留時間歷史 (來源: Mem0.pdf, Section 2.2/Page 6) | [待 Ingest 補充] | [待 Ingest 補充] | [待 Ingest 補充] |
-| **檢索機制（Retrieval）** | 全注意力矩陣計算（Full Self-Attention），無外部索引檢索 (來源: Context_Is_What_You_Need.pdf, Section 1/Page 1-2, Section 2.1/Page 3) | **多路/雙路檢索**：<br/>- Mem0: 稠密語意向量檢索 (來源: Mem0.pdf, Section 2.1/Page 4)<br/>- Mem0^g: 實體中心子圖遍歷（Entity-Centric Subgraph）+ 語意三元組密集匹配（Semantic Triplet Matching）(來源: Mem0.pdf, Section 2.2/Page 6) | [待 Ingest 補充] | [待 Ingest 補充] | [待 Ingest 補充] |
-| **有效工作容量（Effective Capacity）** | **受限於 MECW 光譜**：單針檢索達數萬 tokens，但多目標/排序/統計任務在 100~1,000 tokens 即崩潰，2,000 tokens 幻覺率可達 99% (來源: Context_Is_What_You_Need.pdf, Abstract/Page 1, Section 7.3/Page 10) | **高密度工作容量**：<br/>每段對話長期儲存僅需 7k tokens（Mem0）或 14k tokens（Mem0^g）；推論時僅檢索約 1,764 tokens 關鍵事實注入上下文，完全控制在安全 MECW 內 (來源: Mem0.pdf, Table 2/Page 11, Section 4.5/Page 14) | [待 Ingest 補充] | [待 Ingest 補充] | [待 Ingest 補充] |
-| **檢索搜尋延遲（Search Latency）** | 0 秒（無檢索步驟） (來源: Mem0.pdf, Table 2/Page 11) | **極致低延遲**：<br/>- Mem0: p50 = 0.148s, p95 = 0.200s (全場最低)<br/>- Mem0^g: p50 = 0.476s, p95 = 0.657s (來源: Mem0.pdf, Table 2/Page 11, Section 4.4/Page 13) | p50 = 0.668s<br/>p95 = 1.485s (來源: Mem0.pdf, Table 2/Page 11) | p50 = 0.513s<br/>p95 = 0.778s (來源: Mem0.pdf, Table 2/Page 11) | [待 Ingest 補充] |
-| **端到端總延遲（Total Latency）** | 極端高延遲：p50 = 9.870s, p95 = 17.117s (來源: Mem0.pdf, Table 2/Page 11) | **生產級即時響應**：<br/>- Mem0: p50 = 0.708s, p95 = 1.440s (延遲下降 91.6%)<br/>- Mem0^g: p50 = 1.091s, p95 = 2.590s (來源: Mem0.pdf, Table 2/Page 11, Section 4.3/Page 13) | p50 = 1.410s<br/>p95 = 4.374s (來源: Mem0.pdf, Table 2/Page 11) | p50 = 1.292s<br/>p95 = 2.926s (來源: Mem0.pdf, Table 2/Page 11) | [待 Ingest 補充] |
-| **推論品質評分（LOCOMO $J$ Score）** | **全量上下文上限**：72.90 ± 0.19% (來源: Mem0.pdf, Table 2/Page 11) | **記憶增強最佳水準**：<br/>- Mem0: 66.88 ± 0.15% (Multi-Hop 最優 51.15%)<br/>- Mem0^g: 68.44 ± 0.17% (Temporal 最優 58.13%) (來源: Mem0.pdf, Table 1-2/Page 9, 11) | 48.38 ± 0.15% (來源: Mem0.pdf, Table 2/Page 11) | 65.99 ± 0.16% (Open-Domain 最佳 76.60%) (來源: Mem0.pdf, Table 1-2/Page 9, 11) | [待 Ingest 補充] |
-| **核心優勢** | 零外部元件依賴；極短上下文（<500 tokens）準確度極高 (來源: Context_Is_What_You_Need.pdf, Section 6.1/Page 9) | 延遲極低、儲存開銷小（7k tokens）、動態狀態更新、時序推理能力突出 (來源: Mem0.pdf, Section 4.1-4.5/Page 9-14) | [待 Ingest 補充] | [待 Ingest 補充] | [待 Ingest 補充] |
-| **主要痛點與 Trade-offs** | 超過 MECW 準確率崩塌至 0%；引起多 Agent [[cascading_failures]]；無法跨 Session 持久化 (來源: Context_Is_What_You_Need.pdf, Section 7.1/Page 9, Section 7.3/Page 10) | Mem0^g 圖譜多跳推理可能引入路徑冗餘；高度依賴 LLM Function Calling 之穩定性 (來源: Mem0.pdf, Section 2.1/Page 4, Section 4.1/Page 10) | [待 Ingest 補充] | 節點摘要全量快取致 Token 膨脹（>600k tokens）；後台構圖需數小時延遲 (來源: Mem0.pdf, Section 4.5/Page 14) | [待 Ingest 補充] |
+| **文獻出處** | [[context_is_what_you_need]] (來源: Context_Is_What_You_Need.pdf) | [[mem0]] (來源: Mem0.pdf) | [[a_mem]] (來源: A-Mem.pdf) | [待 Ingest 補充] (文獻提及: Zep, LOCOMO J=65.99%) (來源: Mem0.pdf, Table 2/Page 11) | [待 Ingest 補充] |
+| **記憶載體與儲存結構** | 推論期上下文（KV-Cache / Prompt 文本），無外部儲存 (來源: Context_Is_What_You_Need.pdf, Section 1/Page 2, Section 3.2/Page 6) | **外部專屬資料庫**：<br/>- Mem0: 稠密向量資料庫 (Dense Vector DB)<br/>- Mem0^g: Neo4j 圖資料庫（預定義實體節點與關係三元組）(來源: Mem0.pdf, Section 2.1-2.2/Page 4-6) | **卡片盒原子筆記（Zettelkasten Notes）**：<br/>免預定義 Schema；以七元組 $(c_i, t_i, K_i, G_i, X_i, e_i, L_i)$ 儲存，組織為多重虛擬盒子（Virtual Boxes）(來源: A-Mem.pdf, Section 3.1/Page 4, Figure 2/Page 3) | 專用時間知識圖譜（節點摘要快取 + 邊事實）(來源: Mem0.pdf, Section 3.3/Page 9, Section 4.5/Page 14) | [待 Ingest 補充] |
+| **寫入與萃取機制（Extraction）** | 靜態拼接（Prompt Concatenation）；推論時單次傳入全部內容 (來源: Context_Is_What_You_Need.pdf, Section 3.2/Page 6) | **雙階段增量萃取**：<br/>非同步全局摘要 $S$ + 近期視窗（$m=10$）+ 當前輪次 $(m_{t-1}, m_t)$，由 LLM 萃取候選事實 $\Omega$ (來源: Mem0.pdf, Section 2.1/Page 3-4) | **多屬性原子生成**：<br/>LLM 依 Prompt $P_{s1}$ 自主提煉關鍵詞 $K_i$、分類標籤 $G_i$ 與上下文描述 $X_i$，並串接計算嵌入向量 $e_i$ (來源: A-Mem.pdf, Section 3.1/Page 4) | [待 Ingest 補充] | [待 Ingest 補充] |
+| **更新與整合機制（Consolidation）** | 無動態更新機制（Stateless）；無狀態覆寫，外部整合機制標註為 `[資料不足，待補充]` (來源: Context_Is_What_You_Need.pdf, Section 3.1-3.2/Page 5-6) | **前向工具調用四態操作**：<br/>- 向量檢索 Top-$s$ 舊記憶，由 LLM 工具調用決定 ADD / UPDATE / DELETE / NOOP (來源: Mem0.pdf, Section 2.1/Page 4, Appendix B/Page 21)<br/>- Mem0^g 衝突採標記失效（Invalidate）(來源: Mem0.pdf, Section 2.2/Page 6) | **雙向演化與連結機制**：<br/>- 連結生成（LG）：向量篩選 Top-$k$ 近鄰 + LLM 生成關聯 $L_i$<br/>- 記憶演化（ME）：新筆記反向刺激近鄰舊記憶，重寫其 $X_j, K_j, G_j$（強化/合併/修剪）(來源: A-Mem.pdf, Section 3.2-3.3/Page 4-5) | 後台多輪非同步 LLM 批次構建（延遲數小時）(來源: Mem0.pdf, Section 4.5/Page 14) | [待 Ingest 補充] |
+| **檢索機制（Retrieval）** | 全注意力矩陣計算（Full Self-Attention），無外部索引檢索 (來源: Context_Is_What_You_Need.pdf, Section 1/Page 1-2, Section 2.1/Page 3) | **多路/雙路檢索**：<br/>- Mem0: 稠密向量檢索 (來源: Mem0.pdf, Section 2.1/Page 4)<br/>- Mem0^g: 實體中心子圖遍歷 + 語意三元組匹配 (來源: Mem0.pdf, Section 2.2/Page 6) | **向量檢索 + 虛擬盒子連帶存取**：<br/>查詢向量餘弦比對檢索 Top-$k$ 筆記；命中筆記所在 Box 內之相連記憶可連帶自動存取 (來源: A-Mem.pdf, Section 3.4/Page 5, Figure 2/Page 3) | 時間錨定上下文檢索 (來源: Mem0.pdf, Section 3.3/Page 9) | [待 Ingest 補充] |
+| **工作容量與 Token 消耗** | 受限於 MECW；複雜任務 100~1,000 tokens 崩壞，2,000 tokens 幻覺率達 99% (來源: Context_Is_What_You_Need.pdf, Abstract/Page 1, Section 7.3/Page 10) | 長期儲存 7k~14k tokens；推論僅傳入約 1,764 tokens 關鍵事實，節省 90% 以上 Token (來源: Mem0.pdf, Table 2/Page 11, Section 4.5/Page 14) | 推論僅檢索 1,216~2,520 tokens；相較全量基準（16,910 tokens）縮減 85%~93% Token 消耗 (來源: A-Mem.pdf, Table 1/Page 6, Section 4.3/Page 7) | 檢索傳入 3,911 tokens；但圖譜儲存膨脹逾 600k tokens (來源: Mem0.pdf, Table 2/Page 11, Section 4.5/Page 14) | [待 Ingest 補充] |
+| **延遲表現與擴展性** | 搜尋延遲 0s；端到端總延遲極高（p50=9.87s, p95=17.117s）(來源: Mem0.pdf, Table 2/Page 11) | **極致低延遲**：<br/>- 搜尋延遲: p50=0.148s, p95=0.200s<br/>- 總延遲: p50=0.708s, p95=1.440s (來源: Mem0.pdf, Table 2/Page 11) | **微秒級檢索擴展**：<br/>- 100 萬筆筆記檢索時間僅 $3.70 \mu\text{s}$<br/>- 寫入處理耗時: GPT-4o-mini 為 5.4s，Llama-3.2-1B 為 1.1s (來源: A-Mem.pdf, Section 4.3/Page 7, Table 4/Page 8) | 搜尋 p50=0.513s, p95=0.778s；總延遲 p50=1.292s, p95=2.926s (來源: Mem0.pdf, Table 2/Page 11) | [待 Ingest 補充] |
+| **評測成績（LoCoMo 基準）** | **全量上下文**：<br/>LLM-as-a-Judge J=72.90% (來源: Mem0.pdf, Table 2/Page 11) | **Mem0 實測**：<br/>- Mem0: J=66.88% (Multi-Hop J=51.15%)<br/>- Mem0^g: J=68.44% (Temporal J=58.13%) (來源: Mem0.pdf, Table 1-2/Page 9, 11) | **A-Mem 原文（GPT-4o-mini）**：<br/>- Multi-Hop F1=27.02 (ROUGE-L=44.27)<br/>- Temporal F1=45.85<br/>*(Mem0 覆測 J=48.38%，見並陳說明)* (來源: A-Mem.pdf, Table 1/Page 6; Mem0.pdf, Table 2/Page 11) | J=65.99% (Open-Domain 最佳 76.60%) (來源: Mem0.pdf, Table 1-2/Page 9, 11) | [待 Ingest 補充] |
+| **核心優勢** | 零外部組件依賴；極短上下文（<500 tokens）準確度高 (來源: Context_Is_What_You_Need.pdf, Section 6.1/Page 9) | 超低延遲、結構緊湊、時序失效機制強大、生產部署成熟 (來源: Mem0.pdf, Section 4.1-4.5/Page 9-14) | 免預定義 Schema、雙向反向演化、多跳與時序推理突出、在開源小模型綜合排名第一 (來源: A-Mem.pdf, Table 1/Page 6, Section 5/Page 9) | 外部常識整合佳 (來源: Mem0.pdf, Section 4.1/Page 10) | [待 Ingest 補充] |
+| **主要痛點與 Trade-offs** | 超過 MECW 準確率崩塌至 0%；引起 [[cascading_failures]]；無法跨 Session 持久化 (來源: Context_Is_What_You_Need.pdf, Section 7.1/Page 9, Section 7.3/Page 10) | Mem0^g 多跳推理圖遍歷可能帶來冗餘；依賴 Function Calling (來源: Mem0.pdf, Section 4.1/Page 10) | 寫入期需多輪 LLM 調用（5.4s）；在嚴格語意裁判（Judge）評估下成績有爭議 (來源: A-Mem.pdf, Section 4.3/Page 7; Mem0.pdf, Table 2/Page 11) | 節點快取致儲存膨脹 20 倍（>600k tokens）；後台構圖延遲數小時 (來源: Mem0.pdf, Section 4.5/Page 14) | [待 Ingest 補充] |
 
 ---
 
 ## 關鍵機制差異與觀點並陳
 
-### 1. 全量上下文（Full-Context）vs. 外部動態記憶（External Memory）
-- **Full-Context 觀點**：
-  在 LOCOMO 基準測試中，直接傳入 26,031 tokens 原始對話仍取得了全場最高的 LLM-as-a-Judge 得分（72.90%），顯示原始文本完整保留了所有細微脈絡，避免了任何資訊萃取過程中的遺漏 (來源: Mem0.pdf, Section 4.3/Page 13)。
-- **動態記憶觀點（Mem0 / Context Is What You Need）**：
-  1. Full-Context 的高得分以代價極高的運算資源換取（每次查詢 p95 需 17.117 秒），在生產系統中無法即時互動 (來源: Mem0.pdf, Section 4.3/Page 13)。
-  2. 依據 [[context_is_what_you_need]]，當對話跨越數週數月突破百萬級別時，注意力發散會導致準確率崩潰（幻覺率達 99%），且模型在 Session 結束時會被迫 Reset (來源: Context_Is_What_You_Need.pdf, Section 7.1/Page 9; Mem0.pdf, Section 1/Page 1-2)。
-  3. Mem0 將上下文精煉至 1,764 tokens，以讓步約 4.5% 品質為代價，換取 91.6% 延遲下降與跨 Session 持久化，是工程落地的更佳解 (來源: Mem0.pdf, Section 4.3/Page 13)。
+### 1. 預定義圖譜綱要（Mem0^g）vs. 卡片盒免綱要組織（A-Mem）
+- **A-Mem 的批判與觀點**：
+  A-Mem 認為將記憶鎖定在圖資料庫（如 Neo4j）的預定義 Schema 與預設實體關係中過於僵化。當 Agent 學習到跨領域的新概念（如新型演算法、非標準人際動態）時，靜態圖結構無法自我進化。A-Mem 透過 LLM 自主生成上下文、標籤與動態連結，形成無需人工介入定義 Schema 的活態網絡 (來源: A-Mem.pdf, Section 1/Page 1-2)。
+- **Mem0^g 的架構觀點**：
+  Mem0^g 主張顯式定義實體節點與關係三元組 $(v_s, r, v_d)$ 能提供精準的語意邊界，配合時間標籤與標記失效（Invalidate）機制，在時序演變判定（Temporal Reasoning）中能有效消除語意歧義，並在 LOCOMO Temporal 題型上取得全場最高的 $J=58.13\%$ (來源: Mem0.pdf, Section 2.2/Page 5-6, Table 1/Page 9)。
 
-### 2. 純密集自然語言記憶（Mem0）vs. 結構化圖譜記憶（Mem0^g）
-- **密集自然語言記憶優勢**：
-  在 Single-Hop（$J=67.13\%$）與 Multi-Hop（$J=51.15\%$）題型中，純文本事實記憶表現優於圖譜結構。密集自然語言已具備充分的語意豐富度，圖譜結構在跨多輪整合時反而可能引入複雜遍歷開銷與冗餘節點干擾 (來源: Mem0.pdf, Section 4.1/Page 9-10, Section 4.2/Page 10-11)。
-- **圖譜結構優勢**：
-  在 Temporal 題型中，Mem0^g 取得全場最高分（$J=58.13\%$），證明有向標記圖結合時間戳記與「標記失效（Temporal Invalidation）」機制，在捕捉事件先後順序、相對關係演變上具有不可替代的結構性優勢 (來源: Mem0.pdf, Section 4.1/Page 10)。
+### 2. 記憶整合哲學：前向覆寫替換（Mem0）vs. 反向深度演化（A-Mem）
+- **Mem0 的前向覆寫機制**：
+  Mem0 透過工具調用執行 ADD / UPDATE / DELETE / NOOP。此邏輯以當前萃取之新事實為中心，若發現更豐富資訊則覆寫舊記憶，若矛盾則刪除或標記失效，未命中的歷史記憶保持不變 (來源: Mem0.pdf, Section 2.1/Page 4, Appendix B/Page 21)。
+- **A-Mem 的反向演化機制**：
+  A-Mem 主張記憶更新必須是雙向的。新記憶的寫入不僅自身建檔，更會作為刺激源，觸發近鄰歷史筆記的重寫（Rewrite）與屬性更新（強化、合併、修剪），使歷史記憶隨認知增長而深化，並透過 t-SNE 證實其能促成緊湊的語意群集 (來源: A-Mem.pdf, Section 3.3/Page 4-5, Section 4.7/Page 9)。
 
-### 3. 即時輕量圖譜（Mem0^g）vs. 節點摘要全量快取圖譜（Zep）
-- **Zep 機制與優勢**：
-  Zep 採用時間知識圖譜，在每個節點快取抽象摘要並於邊上記錄事實，在 Open-Domain 題型中取得最高分（$J=76.60\%$），證明其對常識與對話內容之深度整合具備微幅優勢 (來源: Mem0.pdf, Table 1/Page 9, Section 4.5/Page 14)。
-- **Mem0 的工程質疑**：
-  Zep 的節點摘要快取導致單段對話儲存空間激增至超過 600k tokens（為原始對話之 23 倍），且其依賴多輪非同步 LLM 背景運算，新加入記憶需等待數小時後才能被正確檢索；而 Mem0^g 僅佔 14k tokens，且能在 1 分鐘內完成構圖，更符合生產即時性要求 (來源: Mem0.pdf, Section 4.5/Page 14)。
+### 3. LOCOMO 基準評測中的指標分歧與跨團隊相互評價（觀點完全並陳）
+- **A-Mem 團隊之評測主張（Xu et al., 2025）**：
+  A-Mem 採用標準 NLP 評測指標（F1, BLEU-1, ROUGE-L, METEOR, SBERT）。在 LoCoMo 多跳任務上，A-Mem 的 F1 達 27.02，ROUGE-L 達 44.27（高出 LoCoMo 基準一倍以上）；在非 GPT 開源模型（Qwen, Llama 1B~3B）上綜合排名全面奪得第 1.0；在百萬級規模擴展性測試中，檢索時間僅需 $3.70 \mu\text{s}$ (來源: A-Mem.pdf, Table 1/Page 6, Section 4.3/Page 7, Table 4/Page 8)。
+- **Mem0 團隊之反向實測主張（Chhikara et al., 2025）**：
+  Mem0 團隊認為 F1 與 BLEU 等詞彙重疊指標在對話事實性評估上具備嚴重誤導性（例如出生月份答錯仍可獲高 F1），因此全面引入 LLM-as-a-Judge ($J$)。在 Mem0 團隊以 GPT-4o-mini 重新運行 A-Mem 的實驗中，A-Mem 的總體 $J$ 分數僅為 **48.38%**（低於 Mem0 的 66.88% 與 Zep 的 65.99%），且在 Multi-Hop 題型僅為 **18.85%**。Mem0 團隊進一步指出 A-Mem 搜尋延遲（p50=0.668s）顯著高於 Mem0（0.148s），論證精簡的密集語言事實與明確三元組比卡片盒筆記更能抵禦語意幻覺 (來源: Mem0.pdf, Section 3.2/Page 7, Table 1-2/Page 9, 11, Section 4.4/Page 13)。
+- **知識庫綜合研判**：
+  詞彙重疊指標（ROUGE/BLEU）與模型評判指標（LLM-as-a-Judge）反映了不同的評估維度。A-Mem 在小參數模型的輕量化適應與多跳關鍵詞匹配上展現優勢，而 Mem0 在嚴格語意事實性評判與生產級延遲控制上具備強大競爭力。兩者觀點互為對照，不可偏廢。
 
 ---
 
 ## 相關引用與頁面
 - 基礎限制論文：[[context_is_what_you_need]]
-- 記憶架構論文：[[mem0]]
+- 記憶架構論文：[[mem0]]、[[a_mem]]
 - 核心技術概念：
   - [[mecw_vs_mcw]]（有效上下文窗口臨界）
-  - [[dynamic_memory_operations]]（ADD / UPDATE / DELETE / NOOP）
+  - [[dynamic_memory_operations]]（Mem0 四態生命週期操作）
   - [[graph_memory_representations]]（圖譜表徵與雙路檢索）
+  - [[zettelkasten_agentic_memory]]（卡片盒原子筆記模型）
+  - [[memory_evolution_and_linking]]（自主連結與歷史反向演化）
   - [[memory_latency_cost_tradeoffs]]（延遲成本準確率權衡）
   - [[cascading_failures]]（Agent 級聯失敗機制）

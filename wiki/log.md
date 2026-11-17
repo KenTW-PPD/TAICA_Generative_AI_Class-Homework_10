@@ -1,5 +1,25 @@
 # Ingest 與 Lint 運作日誌
 
+## Ingest: A-Mem: Agentic Memory for LLM Agents (2025)
+- **處理日期**：2026-11-17
+- **Ingest 來源**：`raw/A-Mem.pdf` (來源: A-Mem.pdf)
+- **異動與新增檔案清單**：
+  - `wiki/papers/a_mem.md` (新增單篇文獻深度筆記)
+  - `wiki/concepts/zettelkasten_agentic_memory.md` (新增卡片盒原子筆記模型概念頁)
+  - `wiki/concepts/memory_evolution_and_linking.md` (新增自主連結生成與反向記憶演化概念頁)
+  - `wiki/syntheses/architecture_comparison.md` (更新多架構對比表，填入 A-Mem 規格並陳述與 Mem0 評測指標分歧)
+  - `wiki/index.md` (更新首頁架構導圖、閱讀路徑與全頁面索引)
+  - `wiki/log.md` (追加日誌記錄)
+
+### Lint 檢查結果
+- [x] **連結檢查（Link Check）**：所有雙向連結語法皆正確對應到 `wiki/` 實體 `.md` 檔案，無任何斷鏈。
+- [x] **孤島檢查（Island Check）**：所有 `wiki/` 頁面皆已登記於 `wiki/index.md`，且每一內容頁面皆引用 `raw/` 下之出處。
+- [x] **出處檢查（Citation Check）**：逐段具備 `(來源: A-Mem.pdf, <章節/頁碼>)`、`(來源: Mem0.pdf, <章節/頁碼>)` 或 `(來源: Context_Is_What_You_Need.pdf, <章節/頁碼>)` 精確標記；未出現於原文之細節標註 `[資料不足，待補充]`，符合零幻覺規範。
+- [x] **並陳檢查（Balance Check）**：對比表與並陳章節完整保留了 A-Mem 團隊在 ROUGE/BLEU 與開源小模型之優異實測主張，同時並陳 Mem0 團隊在 LLM-as-a-Judge 嚴格語意評判下對 A-Mem 的覆測結果與延遲對照，未偏廢任何機制與論述。
+- **Lint 狀態**：全數通過 (PASSED)。
+
+---
+
 ## Ingest: Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory (2025)
 - **處理日期**：2026-11-17
 - **Ingest 來源**：`raw/Mem0.pdf` (來源: Mem0.pdf)
